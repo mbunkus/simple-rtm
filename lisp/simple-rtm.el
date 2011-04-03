@@ -6,6 +6,18 @@
 (defvar simple-rtm-tasks)
 (defvar simple-rtm-data)
 
+(defgroup simple-rtm nil
+  "A simple interface to Remember The Milk."
+  :prefix "simple-rtm-"
+  :group 'tools)
+
+(defcustom simple-rtm-completing-read-function 'ido-completing-read
+  "Function to be called when requesting input from the user."
+  :group 'simple-rtm
+  :type '(radio (function-item ido-completing-read)
+		(function-item iswitchb-completing-read)
+		(function :tag "Other")))
+
 (defgroup simple-rtm-faces nil
   "Customize the appearance of SimpleRTM"
   :prefix "simple-rtm-"
