@@ -20,6 +20,14 @@
   "Face for lists."
   :group 'simple-rtm-faces)
 
+(defface simple-rtm-smart-list
+  '((((class color) (background light))
+     :foreground "lightblue")
+    (((class color) (background dark))
+     :foreground "lightblue"))
+  "Face for smart lists."
+  :group 'simple-rtm-faces)
+
 (defface simple-rtm-task
   '((((class color) (background light))
      :foreground "grey60")
@@ -159,18 +167,17 @@
   (not (member (simple-rtm--overlay-name list-or-id) buffer-invisibility-spec)))
 
 (defun simple-rtm--render-list-header (list)
-  (let ((name (getf list :name)))
+  (let ((name (getf list :name))
+        (is-smart (string= (xml-get-attribute (getf list :xml) 'smart) "1")))
     (insert (propertize (concat "["
                                 (cond ((not (getf list :tasks)) " ")
                                       ((getf list :expanded) "-")
                                       (t "+"))
                                 "] "
-                                (if (string= (xml-get-attribute (getf list :xml) 'smart) "1")
-                                    (concat "<" name ">")
-                                  name)
+                                name
                                 "\n")
                         :list-id (getf list :id)
-                        'face 'simple-rtm-list))))
+                        'face (if is-smart 'simple-rtm-smart-list 'simple-rtm-list)))))
 
 (defun simple-rtm--render-list (list)
   (let ((name (getf list :name))
