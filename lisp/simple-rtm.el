@@ -114,7 +114,7 @@
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
         (define-key map (kbd "U") 'simple-rtm-undo)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
-        (define-key map (kbd "d") 'simple-rtm-task-set-due-date)
+        (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
         (define-key map (kbd "l") 'simple-rtm-task-set-location)
         (define-key map (kbd "m") 'simple-rtm-task-move)
         (define-key map (kbd "p") 'simple-rtm-task-postpone)
@@ -402,9 +402,9 @@
 (simple-rtm--defun-set-priority "3")
 (simple-rtm--defun-set-priority "none")
 
-(defmacro simple-rtm--defun-task-mod (name &rest body)
+(defmacro simple-rtm--defun-task-mod (name args &rest body)
   (declare (indent 0))
-  `(defun ,(intern (concat "simple-rtm--task-" name)) (task)
+  `(defun ,(intern (concat "simple-rtm--task-" name)) ,(append '(task) args)
      (simple-rtm--start-mass-transaction)
      (simple-rtm--modify-task (getf task :id)
                               (lambda (task)
@@ -418,7 +418,7 @@
                                      ,@body)))))))
 
 (simple-rtm--defun-task-mod
-  "postpone"
+  "postpone" ()
   (rtm-tasks-postpone list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
@@ -427,13 +427,22 @@
   (simple-rtm--task-postpone task))
 
 (simple-rtm--defun-task-mod
-  "complete"
+  "complete" ()
   (rtm-tasks-complete list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
   "task-complete"
   "Complete the selected tasks."
   (simple-rtm--task-complete task))
+
+(simple-rtm--defun-task-mod
+  "set-duedate" (duedate)
+  (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
+
+(simple-rtm--defun-task-action
+  "task-set-duedate"
+  "Set the due date of the selected tasks."
+  (simple-rtm--task-set-duedate task (funcall simple-rtm-completing-read-function "New due date: " nil)))
 
 (simple-rtm--defun-action
   "undo"
