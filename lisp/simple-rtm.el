@@ -459,6 +459,15 @@
                 "New URL: " nil nil nil
                 (xml-get-attribute (getf first-task :xml) 'url))))
 
+(simple-rtm--defun-task-action
+  "rename"
+  "Rename the selected tasks."
+  (unless (string= name (getf task :name))
+    (rtm-tasks-set-name list-id taskseries-id task-id name))
+  (name (funcall simple-rtm-completing-read-function
+                 "Rename to: " nil nil nil
+                 (getf first-task :name))))
+
 (simple-rtm--defun-action
   "undo"
   "Undo previous action."
