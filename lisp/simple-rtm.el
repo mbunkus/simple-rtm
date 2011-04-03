@@ -414,8 +414,8 @@
     (simple-rtm-redraw)))
 
 (defun simple-rtm--build-data ()
-  (let* ((expanded (make-hash-table))
-         (marked (make-hash-table))
+  (let* ((expanded (make-hash-table :test 'equal))
+         (marked (make-hash-table :test 'equal))
          (task-node-handler
           (lambda (task-node)
             (let ((task-id (xml-get-attribute task-node 'id)))
