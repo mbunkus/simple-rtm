@@ -219,6 +219,14 @@
         ((string= v1 v2) nil)
         (t 1)))
 
+(defun simple-rtm--xml-set-attribute (node attribute value)
+  (let ((attributes (cdadr node)))
+    (while (and attributes (not (eq (caar attributes) attribute)))
+      (setf attributes (cdr attributes)))
+    (if attributes
+        (setcdr (car attributes) (or value ""))))
+  node)
+
 (defun simple-rtm--task-duedate (task &optional default)
   (let ((duedate (xml-get-attribute task 'due)))
     (if (string= duedate "")
@@ -324,6 +332,41 @@
                                          ((eq action 'mark) t)
                                          (t nil))))))
 
+(defun simple-rtm--task-set-priority (task priority)
+  (simple-rtm--modify-task (getf task :id)
+                           (lambda (task)
+                             (let* ((taskseries-node (getf task :xml))
+                                    (task-node (car (xml-get-children taskseries-node 'task))))
+                               (unless (string= priority (xml-get-attribute task-node 'priority))
+                                 (simple-rtm--xml-set-attribute task-node 'priority priority)
+                                 ;; TODO: update net
+                                 )))))
+
+(defun simple-rtm--selected-tasks ()
+  (or (apply 'append
+             (mapcar (lambda (list)
+                       (if (simple-rtm--list-visible-p list)
+                           (remove-if (lambda (task) (not (getf task :marked)))
+                                      (getf list :tasks))))
+                     (getf simple-rtm-data :lists)))
+      (list (simple-rtm--find-task-at-point))))
+
+(defmacro simple-rtm--defun-set-priority (priority)
+  (declare (indent 1))
+  `(defun ,(intern (concat "simple-rtm-task-set-priority-" priority)) ()
+     ,(concat "Set the priority of selected tasks to " priority ".")
+     (interactive)
+     (dolist (task (simple-rtm--selected-tasks))
+       (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority)))
+     ;; TODO: re-sort
+     (simple-rtm--build-data)
+     (simple-rtm-redraw)))
+
+(simple-rtm--defun-set-priority "1")
+(simple-rtm--defun-set-priority "2")
+(simple-rtm--defun-set-priority "3")
+(simple-rtm--defun-set-priority "none")
+
 (defun simple-rtm-task-select-toggle-current ()
   (interactive)
   (let* ((task (simple-rtm--find-task-at-point)))
@@ -359,6 +402,7 @@
   (simple-rtm-redraw))
 
 (defun simple-rtm-task-select-regex (regex)
+  "Select tasks matching REGEX."
   (interactive "MRegex? ")
   (when (not (string= (or regex "") ""))
     (dolist (list (getf simple-rtm-data :lists))
@@ -368,36 +412,45 @@
                 (simple-rtm--task-set-marked task 'mark)))))
     (simple-rtm-redraw)))
 
+(defun simple-rtm--build-data ()
+  (let* ((expanded (make-hash-table))
+         (marked (make-hash-table))
+         (task-node-handler
+          (lambda (task-node)
+            (let ((task-id (xml-get-attribute task-node 'id)))
+              (list :name (decode-coding-string (xml-get-attribute task-node 'name) 'utf-8)
+                    :id task-id
+                    :list-id list-id
+                    :marked (gethash task-id marked)
+                    :xml task-node))))
+         (list-node-handler
+          (lambda (list-node)
+            (let ((list-id (xml-get-attribute list-node 'id)))
+              (list :name (decode-coding-string (xml-get-attribute list-node 'name) 'utf-8)
+                    :id list-id
+                    :expanded (gethash list-id expanded)
+                    :xml list-node
+                    :tasks (sort (mapcar task-node-handler
+                                         (xml-get-children (car (remove-if (lambda (task-list-node)
+                                                                             (not (string= list-id (xml-get-attribute task-list-node 'id))))
+                                                                           simple-rtm-tasks))
+                                                           'taskseries))
+                                 'simple-rtm--task<))))))
+
+    (dolist (list (getf simple-rtm-data :lists))
+      (puthash (getf list :id) (getf list :expanded) expanded)
+      (dolist (task (getf list :tasks))
+        (puthash (getf task :id) (getf task :marked) marked)))
+
+    (setq simple-rtm-data (list :lists (simple-rtm--sort-lists (mapcar list-node-handler simple-rtm-lists))))))
+
 (defun simple-rtm-reload ()
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
-    (let* ((task-node-handler
-            (lambda (task-node)
-              (list :name (decode-coding-string (xml-get-attribute task-node 'name) 'utf-8)
-                    :id (xml-get-attribute task-node 'id)
-                    :list-id list-id
-                    :marked nil
-                    :xml task-node)))
-           (list-node-handler
-            (lambda (list-node)
-              (let ((list-id (xml-get-attribute list-node 'id)))
-                (list :name (decode-coding-string (xml-get-attribute list-node 'name) 'utf-8)
-                      :id list-id
-                      :expanded nil
-                      :xml list-node
-                      :tasks (sort (mapcar task-node-handler
-                                           (xml-get-children (car (remove-if (lambda (task-list-node)
-                                                                               (not (string= list-id (xml-get-attribute task-list-node 'id))))
-                                                                             simple-rtm-tasks))
-                                                             'taskseries))
-                                   'simple-rtm--task<))))))
-      (unless simple-rtm-lists
-        (setq simple-rtm-lists (rtm-lists-get-list)))
-      (unless simple-rtm-tasks
-        (setq simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete")))
-      (setq simple-rtm-data (list :lists (simple-rtm--sort-lists (mapcar list-node-handler simple-rtm-lists))))
-      (simple-rtm-redraw)
-      (simple-rtm-list-expand-all))))
+    (setq simple-rtm-lists (rtm-lists-get-list)
+          simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete"))
+    (simple-rtm--build-data)
+    (simple-rtm-redraw)))
 
 (defun simple-rtm-redraw ()
   (interactive)
