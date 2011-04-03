@@ -108,7 +108,7 @@
 (setf simple-rtm-mode-map
       (let ((map (make-keymap)))
         (suppress-keymap map t)
-        (define-key map (kbd "$") 'simple-rtm-reload)
+        (define-key map (kbd "$") 'simple-rtm-reload-all)
         (define-key map (kbd "* *") 'simple-rtm-task-select-current)
         (define-key map (kbd "* a") 'simple-rtm-task-select-all)
         (define-key map (kbd "* n") 'simple-rtm-task-select-none)
@@ -585,11 +585,19 @@
 
     (setq simple-rtm-data (list :lists (simple-rtm--sort-lists (mapcar list-node-handler simple-rtm-lists))))))
 
+(defun simple-rtm-reload-all ()
+  (interactive)
+  (with-current-buffer (simple-rtm--buffer)
+    (setq simple-rtm-lists nil
+          simple-rtm-tasks nil)
+    (simple-rtm-reload)))
+
 (defun simple-rtm-reload ()
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
-    (setq simple-rtm-lists (rtm-lists-get-list)
-          simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete"))
+    (unless simple-rtm-lists
+      (setq simple-rtm-lists (rtm-lists-get-list)))
+    (setq simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete"))
     (simple-rtm--build-data)
     (simple-rtm-redraw)))
 
