@@ -284,15 +284,17 @@
               0))))
 
 (defun simple-rtm--render-task (task)
-  (let* ((task-node (car (xml-get-children (getf task :xml) 'task)))
+  (let* ((taskseries-node (getf task :xml))
+         (task-node (car (xml-get-children taskseries-node 'task)))
          (priority (xml-get-attribute task-node 'priority))
          (priority-str (if (string= priority "N")
                            "  "
                          (propertize (concat "P" priority)
                                      'face (intern (concat "simple-rtm-task-priority-" priority)))))
          (name (getf task :name))
-         (url (xml-get-attribute (getf task :xml) 'url))
+         (url (xml-get-attribute taskseries-node 'url))
          (duedate (simple-rtm--task-duedate task-node))
+         (num-notes (- (length (car (xml-get-children taskseries-node 'notes))) 2))
          (today (format-time-string "%Y-%m-%d")))
     (insert (propertize (mapconcat 'identity
                                    (delq nil
@@ -306,7 +308,10 @@
                                                                        'simple-rtm-task-duedate-due)))
                                                name
                                                (if (not (string= url ""))
-                                                   (propertize url 'face 'simple-rtm-task-url))))
+                                                   (propertize url 'face 'simple-rtm-task-url))
+                                               (if (> num-notes 0)
+                                                   (format "[%d]" num-notes))
+                                               ))
                                    " ")
                         :list-id (getf task :list-id)
                         :task-id (getf task :id))
