@@ -297,6 +297,16 @@
       (if (string= id (getf task :id))
           (funcall modifier task)))))
 
+(defun simple-rtm--selected-tasks ()
+  (or (apply 'append
+             (mapcar (lambda (list)
+                       (if (simple-rtm--list-visible-p list)
+                           (remove-if (lambda (task) (not (getf task :marked)))
+                                      (getf list :tasks))))
+                     (getf simple-rtm-data :lists)))
+      (delq nil (list (simple-rtm--find-task-at-point)))
+      (error "No task selected and point not on a task")))
+
 (defun simple-rtm--list-set-expansion (list action)
   (setf (getf list :expanded)
         (cond ((eq action 'toggle) (not (getf list :expanded)))
@@ -339,18 +349,10 @@
                                     (task-node (car (xml-get-children taskseries-node 'task))))
                                (unless (string= priority (xml-get-attribute task-node 'priority))
                                  (simple-rtm--xml-set-attribute task-node 'priority priority)
-                                 ;; TODO: update net
-                                 )))))
-
-(defun simple-rtm--selected-tasks ()
-  (or (apply 'append
-             (mapcar (lambda (list)
-                       (if (simple-rtm--list-visible-p list)
-                           (remove-if (lambda (task) (not (getf task :marked)))
-                                      (getf list :tasks))))
-                     (getf simple-rtm-data :lists)))
-      (delq nil (list (simple-rtm--find-task-at-point)))
-      (error "No task selected and point not on a task")))
+                                 (rtm-tasks-set-priority (getf task :list-id)
+                                                         (getf task :id)
+                                                         (xml-get-attribute task-node 'id)
+                                                         priority))))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 1))
@@ -359,9 +361,7 @@
      (interactive)
      (dolist (task (simple-rtm--selected-tasks))
        (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority)))
-     ;; TODO: re-sort
-     (simple-rtm--build-data)
-     (simple-rtm-redraw)))
+     (simple-rtm-reload)))
 
 (simple-rtm--defun-set-priority "1")
 (simple-rtm--defun-set-priority "2")
