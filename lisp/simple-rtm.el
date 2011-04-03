@@ -349,7 +349,8 @@
                            (remove-if (lambda (task) (not (getf task :marked)))
                                       (getf list :tasks))))
                      (getf simple-rtm-data :lists)))
-      (list (simple-rtm--find-task-at-point))))
+      (delq nil (list (simple-rtm--find-task-at-point)))
+      (error "No task selected and point not on a task")))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 1))
