@@ -378,22 +378,39 @@
      ,@body
      (simple-rtm-reload)))
 
-(defmacro simple-rtm--defun-task-action (name doc &rest body)
+(defmacro simple-rtm--defun-task-action (name doc body &optional args)
   (declare (indent 0))
-  `(defun ,(intern (concat "simple-rtm-" name)) ()
-     ,doc
-     (interactive)
-     (simple-rtm--start-mass-transaction)
-     (dolist (task (simple-rtm--selected-tasks))
-       ,@body)
-     (if (not (car simple-rtm-transaction-ids))
-         (pop simple-rtm-transaction-ids))
-     (simple-rtm-reload)))
+  (let (vars setters)
+    (while args
+      (setq vars (append vars (list (car args)))
+            setters (append setters `((setq ,(car args) ,(cadr args))))
+            args (cddr args)))
+    `(defun ,(intern (concat "simple-rtm-task-" name)) ()
+       ,doc
+       (interactive)
+       (let* ((selected-tasks (simple-rtm--selected-tasks))
+              (first-task (car selected-tasks))
+              ,@vars)
+         (simple-rtm--start-mass-transaction)
+         (progn
+           ,@setters)
+         (dolist (current-task selected-tasks)
+           (simple-rtm--modify-task (getf current-task :id)
+                                    (lambda (task)
+                                      (let* ((taskseries-node (getf task :xml))
+                                             (task-node (car (xml-get-children taskseries-node 'task)))
+                                             (taskseries-id (getf task :id))
+                                             (list-id (getf task :list-id))
+                                             (task-id (xml-get-attribute task-node 'id)))
+                                        (simple-rtm--store-transaction-id ,body)))))
+         (if (not (car simple-rtm-transaction-ids))
+             (pop simple-rtm-transaction-ids))
+         (simple-rtm-reload)))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 0))
   `(simple-rtm--defun-task-action
-     ,(concat "task-set-priority-" priority)
+     ,(concat "set-priority-" priority)
      ,(concat "Set the priority of selected tasks to " priority ".")
      (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority))))
 
@@ -402,47 +419,24 @@
 (simple-rtm--defun-set-priority "3")
 (simple-rtm--defun-set-priority "none")
 
-(defmacro simple-rtm--defun-task-mod (name args &rest body)
-  (declare (indent 0))
-  `(defun ,(intern (concat "simple-rtm--task-" name)) ,(append '(task) args)
-     (simple-rtm--start-mass-transaction)
-     (simple-rtm--modify-task (getf task :id)
-                              (lambda (task)
-                                (let* ((taskseries-node (getf task :xml))
-                                       (task-node (car (xml-get-children taskseries-node 'task)))
-                                       (taskseries-id (getf task :id))
-                                       (list-id (getf task :list-id))
-                                       (task-id (xml-get-attribute task-node 'id)))
-                                  (simple-rtm--store-transaction-id
-                                   (progn
-                                     ,@body)))))))
-
-(simple-rtm--defun-task-mod
-  "postpone" ()
+(simple-rtm--defun-task-action
+  "postpone"
+  "Postpone the selected tasks."
   (rtm-tasks-postpone list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
-  "task-postpone"
-  "Postpone the selected tasks."
-  (simple-rtm--task-postpone task))
-
-(simple-rtm--defun-task-mod
-  "complete" ()
+  "complete"
+  "Complete the selected tasks."
   (rtm-tasks-complete list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
-  "task-complete"
-  "Complete the selected tasks."
-  (simple-rtm--task-complete task))
-
-(simple-rtm--defun-task-mod
-  "set-duedate" (duedate)
-  (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
-
-(simple-rtm--defun-task-action
-  "task-set-duedate"
+  "set-duedate"
   "Set the due date of the selected tasks."
-  (simple-rtm--task-set-duedate task (funcall simple-rtm-completing-read-function "New due date: " nil)))
+  (unless (string= duedate (simple-rtm--task-duedate task-node))
+    (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
+  (duedate (funcall simple-rtm-completing-read-function
+                    "New due date: " nil nil nil
+                    (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
 
 (simple-rtm--defun-action
   "undo"
