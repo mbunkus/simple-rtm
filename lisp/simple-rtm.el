@@ -390,6 +390,7 @@
        (interactive)
        (let* ((selected-tasks (simple-rtm--selected-tasks))
               (first-task (car selected-tasks))
+              (previous-num-transactions (length (delq nil simple-rtm-transaction-ids)))
               ,@vars)
          (simple-rtm--start-mass-transaction)
          (progn
@@ -405,7 +406,8 @@
                                         (simple-rtm--store-transaction-id ,body)))))
          (if (not (car simple-rtm-transaction-ids))
              (pop simple-rtm-transaction-ids))
-         (simple-rtm-reload)))))
+         (if (not (= previous-num-transactions (length (delq nil simple-rtm-transaction-ids))))
+             (simple-rtm-reload))))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 0))
