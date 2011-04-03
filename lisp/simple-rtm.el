@@ -2,10 +2,6 @@
 (require 'pp)
 (require 'cl)
 
-(defvar simple-rtm-lists)
-(defvar simple-rtm-tasks)
-(defvar simple-rtm-data)
-
 (defgroup simple-rtm nil
   "A simple interface to Remember The Milk."
   :prefix "simple-rtm-"
@@ -88,7 +84,12 @@
   "Face for the task's due date if the task is due."
   :group 'simple-rtm-faces)
 
-(dolist (var '(simple-rtm-lists simple-rtm-tasks simple-rtm-data))
+(defvar simple-rtm-lists)
+(defvar simple-rtm-tasks)
+(defvar simple-rtm-data)
+(defvar simple-rtm-transaction-ids)
+
+(dolist (var '(simple-rtm-lists simple-rtm-tasks simple-rtm-data simple-rtm-transaction-ids))
   (make-variable-buffer-local var)
   (put var 'permanent-local t))
 
@@ -111,6 +112,7 @@
         (define-key map (kbd "E a") 'simple-rtm-list-expand-all)
         (define-key map (kbd "E n") 'simple-rtm-list-collapse-all)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
+        (define-key map (kbd "U") 'simple-rtm-undo)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-due-date)
         (define-key map (kbd "l") 'simple-rtm-task-set-location)
@@ -137,6 +139,20 @@
   (unless simple-rtm-lists
     (simple-rtm-reload))
   )
+
+(defun simple-rtm--store-transaction-id (result)
+  (with-current-buffer (simple-rtm--buffer)
+    (when (and (eq (caar result) 'transaction)
+               (string= (or (cdr (assoc 'undoable (cadar result) )) "") "1"))
+      (push (or (cdr (assoc 'id (cadar result) )) "") (car simple-rtm-transaction-ids)))))
+
+(defun simple-rtm--start-mass-transaction ()
+  (if (or (not simple-rtm-transaction-ids)
+          (car simple-rtm-transaction-ids))
+      (push nil simple-rtm-transaction-ids)))
+
+(defun simple-rtm--last-mass-transaction ()
+  (car (delq nil simple-rtm-transaction-ids)))
 
 (defmacro simple-rtm--save-pos (&rest body)
   (declare (indent 0))
@@ -348,24 +364,35 @@
                              (let* ((taskseries-node (getf task :xml))
                                     (task-node (car (xml-get-children taskseries-node 'task))))
                                (unless (string= priority (xml-get-attribute task-node 'priority))
-                                 (simple-rtm--xml-set-attribute task-node 'priority priority)
-                                 (rtm-tasks-set-priority (getf task :list-id)
-                                                         (getf task :id)
-                                                         (xml-get-attribute task-node 'id)
-                                                         priority))))))
+                                 (simple-rtm--store-transaction-id
+                                  (rtm-tasks-set-priority (getf task :list-id)
+                                                          (getf task :id)
+                                                          (xml-get-attribute task-node 'id)
+                                                          priority)))))))
 
 (defmacro simple-rtm--defun-action (name doc &rest body)
   (declare (indent 0))
   `(defun ,(intern (concat "simple-rtm-" name)) ()
      ,doc
      (interactive)
+     ,@body
+     (simple-rtm-reload)))
+
+(defmacro simple-rtm--defun-task-action (name doc &rest body)
+  (declare (indent 0))
+  `(defun ,(intern (concat "simple-rtm-" name)) ()
+     ,doc
+     (interactive)
+     (simple-rtm--start-mass-transaction)
      (dolist (task (simple-rtm--selected-tasks))
        ,@body)
+     (if (not (car simple-rtm-transaction-ids))
+         (pop simple-rtm-transaction-ids))
      (simple-rtm-reload)))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 0))
-  `(simple-rtm--defun-action
+  `(simple-rtm--defun-task-action
      ,(concat "task-set-priority-" priority)
      ,(concat "Set the priority of selected tasks to " priority ".")
      (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority))))
@@ -375,19 +402,48 @@
 (simple-rtm--defun-set-priority "3")
 (simple-rtm--defun-set-priority "none")
 
-(defun simple-rtm--task-postpone (task)
-  (simple-rtm--modify-task (getf task :id)
-                           (lambda (task)
-                             (let* ((taskseries-node (getf task :xml))
-                                    (task-node (car (xml-get-children taskseries-node 'task))))
-                               (rtm-tasks-postpone (getf task :list-id)
-                                                   (getf task :id)
-                                                   (xml-get-attribute task-node 'id))))))
+(defmacro simple-rtm--defun-task-mod (name &rest body)
+  (declare (indent 0))
+  `(defun ,(intern (concat "simple-rtm--task-" name)) (task)
+     (simple-rtm--start-mass-transaction)
+     (simple-rtm--modify-task (getf task :id)
+                              (lambda (task)
+                                (let* ((taskseries-node (getf task :xml))
+                                       (task-node (car (xml-get-children taskseries-node 'task)))
+                                       (taskseries-id (getf task :id))
+                                       (list-id (getf task :list-id))
+                                       (task-id (xml-get-attribute task-node 'id)))
+                                  (simple-rtm--store-transaction-id
+                                   (progn
+                                     ,@body)))))))
 
-(simple-rtm--defun-action
+(simple-rtm--defun-task-mod
+  "postpone"
+  (rtm-tasks-postpone list-id taskseries-id task-id))
+
+(simple-rtm--defun-task-action
   "task-postpone"
   "Postpone the selected tasks."
   (simple-rtm--task-postpone task))
+
+(simple-rtm--defun-task-mod
+  "complete"
+  (rtm-tasks-complete list-id taskseries-id task-id))
+
+(simple-rtm--defun-task-action
+  "task-complete"
+  "Complete the selected tasks."
+  (simple-rtm--task-complete task))
+
+(simple-rtm--defun-action
+  "undo"
+  "Undo previous action."
+  (let ((transaction-ids (simple-rtm--last-mass-transaction)))
+    (unless transaction-ids
+      (error "No transaction to undo"))
+    (dolist (id transaction-ids)
+      (rtm-transactions-undo id))
+    (setf simple-rtm-transaction-ids (cdr (delq nil simple-rtm-transaction-ids)))))
 
 (defun simple-rtm-task-select-toggle-current ()
   (interactive)
