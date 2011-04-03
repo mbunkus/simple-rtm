@@ -150,9 +150,9 @@
     (simple-rtm-reload))
   )
 
-(defun simple-rtm--read (prompt &optional initial-input collection error-msg-if-empty)
+(defun simple-rtm--read (prompt &optional initial-input collection error-msg-if-empty require-match)
   (let ((result (if collection
-                    (funcall simple-rtm-completing-read-function prompt collection nil nil initial-input)
+                    (funcall simple-rtm-completing-read-function prompt collection nil require-match initial-input)
                   (read-input prompt initial-input))))
     (if (and error-msg-if-empty
              (string= (or result "") ""))
@@ -318,6 +318,12 @@
                  (string= (getf list :id) id))
                (getf simple-rtm-data :lists))))
 
+(defun simple-rtm--find-list-by-name (name)
+  (if name
+      (find-if (lambda (list)
+                 (string= (getf list :name) name))
+               (getf simple-rtm-data :lists))))
+
 (defun simple-rtm--find-task-at-point ()
   (let ((list (simple-rtm--find-list (get-text-property (point) :list-id)))
         (task-id (get-text-property (point) :task-id)))
@@ -325,6 +331,12 @@
         (find-if (lambda (task)
                    (string= (getf task :id) task-id))
                  (getf list :tasks)))))
+
+(defun simple-rtm--list-names ()
+  (delq nil (mapcar (lambda (list)
+                      (unless (string= (xml-get-attribute (getf list :xml) 'smart) "1")
+                        (getf list :name)))
+                    (getf simple-rtm-data :lists))))
 
 (defun simple-rtm--modify-task (id modifier)
   (dolist (list (getf simple-rtm-data :lists))
@@ -477,6 +489,14 @@
   (rtm-tasks-notes-add list-id taskseries-id task-id note-title note-text)
   (setq note-title (simple-rtm--read "Note title: " nil nil "Note title must not be empty.")
         note-text (simple-rtm--read "Note text: " nil nil "Note text must not be empty.")))
+
+(simple-rtm--defun-task-action
+  "move"
+  "Move selected tasks to another list."
+  (rtm-tasks-move-to list-id (getf new-list :id) taskseries-id task-id)
+  (setq list-name (simple-rtm--read "New list: " nil (simple-rtm--list-names) "List must not be empty." t)
+        new-list (or (simple-rtm--find-list-by-name list-name)
+                     (error "List not found."))))
 
 (simple-rtm--defun-action
   "undo"
