@@ -84,6 +84,16 @@
   "Face for the task's due date if the task is due."
   :group 'simple-rtm-faces)
 
+(defface simple-rtm-task-url
+  '((((class color) (background light))
+     :underline t
+     :inherit simple-rtm-task)
+    (((class color) (background dark))
+     :underline t
+     :inherit simple-rtm-task))
+  "Face for a task's URL."
+  :group 'simple-rtm-faces)
+
 (defvar simple-rtm-lists)
 (defvar simple-rtm-tasks)
 (defvar simple-rtm-data)
@@ -286,8 +296,8 @@
                                                                          'simple-rtm-task-duedate
                                                                        'simple-rtm-task-duedate-due)))
                                                name
-                                               (if (not (string= url "")) url)
-                                               ))
+                                               (if (not (string= url ""))
+                                                   (propertize url 'face 'simple-rtm-task-url))))
                                    " ")
                         :list-id (getf task :list-id)
                         :task-id (getf task :id))
@@ -439,6 +449,15 @@
   (duedate (funcall simple-rtm-completing-read-function
                     "New due date: " nil nil nil
                     (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
+
+(simple-rtm--defun-task-action
+  "set-url"
+  "Set the URL of the selected tasks."
+  (unless (string= url (xml-get-attribute taskseries-node 'url))
+    (rtm-tasks-set-url list-id taskseries-id task-id url))
+  (url (funcall simple-rtm-completing-read-function
+                "New URL: " nil nil nil
+                (xml-get-attribute (getf first-task :xml) 'url))))
 
 (simple-rtm--defun-action
   "undo"
