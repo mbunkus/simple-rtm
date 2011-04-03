@@ -354,19 +354,40 @@
                                                          (xml-get-attribute task-node 'id)
                                                          priority))))))
 
-(defmacro simple-rtm--defun-set-priority (priority)
-  (declare (indent 1))
-  `(defun ,(intern (concat "simple-rtm-task-set-priority-" priority)) ()
-     ,(concat "Set the priority of selected tasks to " priority ".")
+(defmacro simple-rtm--defun-action (name doc &rest body)
+  (declare (indent 0))
+  `(defun ,(intern (concat "simple-rtm-" name)) ()
+     ,doc
      (interactive)
      (dolist (task (simple-rtm--selected-tasks))
-       (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority)))
+       ,@body)
      (simple-rtm-reload)))
+
+(defmacro simple-rtm--defun-set-priority (priority)
+  (declare (indent 0))
+  `(simple-rtm--defun-action
+     ,(concat "task-set-priority-" priority)
+     ,(concat "Set the priority of selected tasks to " priority ".")
+     (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority))))
 
 (simple-rtm--defun-set-priority "1")
 (simple-rtm--defun-set-priority "2")
 (simple-rtm--defun-set-priority "3")
 (simple-rtm--defun-set-priority "none")
+
+(defun simple-rtm--task-postpone (task)
+  (simple-rtm--modify-task (getf task :id)
+                           (lambda (task)
+                             (let* ((taskseries-node (getf task :xml))
+                                    (task-node (car (xml-get-children taskseries-node 'task))))
+                               (rtm-tasks-postpone (getf task :list-id)
+                                                   (getf task :id)
+                                                   (xml-get-attribute task-node 'id))))))
+
+(simple-rtm--defun-action
+  "task-postpone"
+  "Postpone the selected tasks."
+  (simple-rtm--task-postpone task))
 
 (defun simple-rtm-task-select-toggle-current ()
   (interactive)
