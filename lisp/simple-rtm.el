@@ -126,9 +126,8 @@
     `(let ((,list-id (get-text-property (point) :list-id))
            (,task-id (get-text-property (point) :task-id)))
        ,@body
-       (if (member (simple-rtm--overlay-name (simple-rtm--find-list ,list-id))
-                   buffer-invisibility-spec)
-           (setf ,task-id nil))
+       (unless (simple-rtm--list-visible-p ,list-id)
+         (setf ,task-id nil))
        (if (not (simple-rtm--goto ,list-id ,task-id))
            (goto-char (point-min))))))
 
@@ -153,8 +152,11 @@
         (goto-char list-at)))
     found))
 
-(defun simple-rtm--overlay-name (list)
-  (intern (concat "simple-rtm-list-" (getf list :id))))
+(defun simple-rtm--overlay-name (list-or-id)
+  (intern (concat "simple-rtm-list-" (if (listp list-or-id) (getf list-or-id :id) list-or-id))))
+
+(defun simple-rtm--list-visible-p (list-or-id)
+  (not (member (simple-rtm--overlay-name list-or-id) buffer-invisibility-spec)))
 
 (defun simple-rtm--render-list-header (list)
   (let ((name (getf list :name)))
@@ -254,6 +256,20 @@
                  (string= (getf list :id) id))
                (getf simple-rtm-data :lists))))
 
+(defun simple-rtm--find-task-at-point ()
+  (let ((list (simple-rtm--find-list (get-text-property (point) :list-id)))
+        (task-id (get-text-property (point) :task-id)))
+    (if (and list task-id)
+        (find-if (lambda (task)
+                   (string= (getf task :id) task-id))
+                 (getf list :tasks)))))
+
+(defun simple-rtm--modify-task (id modifier)
+  (dolist (list (getf simple-rtm-data :lists))
+    (dolist (task (getf list :tasks))
+      (if (string= id (getf task :id))
+          (funcall modifier task)))))
+
 (defun simple-rtm--list-set-expansion (list action)
   (setf (getf list :expanded)
         (cond ((eq action 'toggle) (not (getf list :expanded)))
@@ -282,16 +298,16 @@
   (simple-rtm-redraw))
 
 (defun simple-rtm--task-set-marked (task action)
-  (setq task (simple-rtm--modify-task (getf task :id)
-                                      (lambda (task)
-                                        (plist-put task :marked (cond ((eq action 'toggle) (not (getf task :marked)))
-                                                                      ((eq action 'mark) t)
-                                                                      (t nil)))))))
+  (simple-rtm--modify-task (getf task :id)
+                           (lambda (task)
+                             (setf (getf task :marked)
+                                   (cond ((eq action 'toggle) (not (getf task :marked)))
+                                         ((eq action 'mark) t)
+                                         (t nil))))))
 
 (defun simple-rtm-task-select-toggle-current ()
   (interactive)
-  (let* ((task-id (get-text-property (point) :task-id))
-         (task (simple-rtm--find-task task-id)))
+  (let* ((task (simple-rtm--find-task-at-point)))
     (when task
       (simple-rtm--task-set-marked task 'toggle)
       (simple-rtm-redraw)))
