@@ -207,7 +207,7 @@
 (defun simple-rtm--task< (t1 t2)
   (let* ((t1-task (car (xml-get-children (getf t1 :xml) 'task)))
          (t2-task (car (xml-get-children (getf t2 :xml) 'task)))
-         (dueify (lambda (task) (simple-rtm--task-duedate task "0000-00-00")))
+         (dueify (lambda (task) (simple-rtm--task-duedate task "9999-99-99")))
          (t1-due (funcall dueify t1-task))
          (t2-due (funcall dueify t2-task))
          (t1-prio (xml-get-attribute t1-task 'priority))
