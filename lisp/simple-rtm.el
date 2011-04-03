@@ -150,6 +150,13 @@
     (simple-rtm-reload))
   )
 
+(defun simple-rtm--read (prompt &optional initial-input collection error-msg-if-empty)
+  (let ((result (funcall simple-rtm-completing-read-function prompt collection nil nil initial-input)))
+    (if (and error-msg-if-empty
+             (string= (or result "") ""))
+        (error error-msg-if-empty))
+    result))
+
 (defun simple-rtm--store-transaction-id (result)
   (with-current-buffer (simple-rtm--buffer)
     (when (and (eq (caar result) 'transaction)
@@ -390,11 +397,11 @@
 
 (defmacro simple-rtm--defun-task-action (name doc body &optional args)
   (declare (indent 0))
-  (let (vars setters)
-    (while args
-      (setq vars (append vars (list (car args)))
-            setters (append setters `((setq ,(car args) ,(cadr args))))
-            args (cddr args)))
+  (let (vars
+        (act (cdr args)))
+    (while act
+      (setq vars (append vars (list (car act)))
+            act (cddr act)))
     `(defun ,(intern (concat "simple-rtm-task-" name)) ()
        ,doc
        (interactive)
@@ -404,7 +411,7 @@
               ,@vars)
          (simple-rtm--start-mass-transaction)
          (progn
-           ,@setters)
+           ,args)
          (dolist (current-task selected-tasks)
            (simple-rtm--modify-task (getf current-task :id)
                                     (lambda (task)
@@ -446,27 +453,28 @@
   "Set the due date of the selected tasks."
   (unless (string= duedate (simple-rtm--task-duedate task-node))
     (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
-  (duedate (funcall simple-rtm-completing-read-function
-                    "New due date: " nil nil nil
-                    (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
+  (setq duedate (simple-rtm--read "New due date: " (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
 
 (simple-rtm--defun-task-action
   "set-url"
   "Set the URL of the selected tasks."
   (unless (string= url (xml-get-attribute taskseries-node 'url))
     (rtm-tasks-set-url list-id taskseries-id task-id url))
-  (url (funcall simple-rtm-completing-read-function
-                "New URL: " nil nil nil
-                (xml-get-attribute (getf first-task :xml) 'url))))
+  (setq url (simple-rtm--read "New URL: " (xml-get-attribute (getf first-task :xml) 'url))))
 
 (simple-rtm--defun-task-action
   "rename"
   "Rename the selected tasks."
   (unless (string= name (getf task :name))
     (rtm-tasks-set-name list-id taskseries-id task-id name))
-  (name (funcall simple-rtm-completing-read-function
-                 "Rename to: " nil nil nil
-                 (getf first-task :name))))
+  (setq name (simple-rtm--read "Rename to: " (getf first-task :name) nil "Name must not be empty.")))
+
+(simple-rtm--defun-task-action
+  "add-note"
+  "Add a note to the selected tasks."
+  (rtm-tasks-notes-add list-id taskseries-id task-id note-title note-text)
+  (setq note-title (simple-rtm--read "Note title: " nil nil "Note title must not be empty.")
+        note-text (simple-rtm--read "Note text: " nil nil "Note text must not be empty.")))
 
 (simple-rtm--defun-action
   "undo"
