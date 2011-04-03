@@ -151,7 +151,9 @@
   )
 
 (defun simple-rtm--read (prompt &optional initial-input collection error-msg-if-empty)
-  (let ((result (funcall simple-rtm-completing-read-function prompt collection nil nil initial-input)))
+  (let ((result (if collection
+                    (funcall simple-rtm-completing-read-function prompt collection nil nil initial-input)
+                  (read-input prompt initial-input))))
     (if (and error-msg-if-empty
              (string= (or result "") ""))
         (error error-msg-if-empty))
