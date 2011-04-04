@@ -52,7 +52,6 @@ Known issues
 ------------
 
 * Smart lists don't work yet.
-* Adding tasks doesn't work yet.
 * Setting the location doesn't work yet.
 
 Planned features
