@@ -109,7 +109,8 @@
 (setf simple-rtm-mode-map
       (let ((map (make-keymap)))
         (suppress-keymap map t)
-        (define-key map (kbd "$") 'simple-rtm-reload-all)
+        (define-key map (kbd "$") 'simple-rtm-reload)
+        (define-key map (kbd "%") 'simple-rtm-reload-all)
         (define-key map (kbd "* *") 'simple-rtm-task-select-current)
         (define-key map (kbd "* a") 'simple-rtm-task-select-all)
         (define-key map (kbd "* n") 'simple-rtm-task-select-none)
@@ -548,9 +549,11 @@
           (simple-rtm--task-set-marked task 'unmark))))
   (simple-rtm-redraw))
 
-(defun simple-rtm-task-select-regex (regex)
+(defun simple-rtm-task-select-regex (&optional regex)
   "Select tasks matching REGEX."
-  (interactive "MRegex? ")
+  (interactive)
+  (unless regex
+    (setf regex (simple-rtm--read "Mark tasks matching: ")))
   (when (not (string= (or regex "") ""))
     (dolist (list (getf simple-rtm-data :lists))
       (if (simple-rtm--list-visible-p list)
