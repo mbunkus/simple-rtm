@@ -141,7 +141,11 @@
 
 (defun simple-rtm-mode ()
   (interactive)
-  (switch-to-buffer (simple-rtm--buffer))
+  (let* ((buffer (simple-rtm--buffer))
+         (window (get-buffer-window buffer)))
+    (if window
+        (select-window window)
+      (switch-to-buffer buffer)))
   (setq major-mode 'simple-rtm-mode
         mode-name "SimpleRTM"
         mode-line-process ""
