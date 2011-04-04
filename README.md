@@ -62,6 +62,7 @@ Planned features
   call's result instead of reloading all tasks).
 * Show full task details in other buffer
 * Show/edit/delete notes
+* Add docstrings to all interactive functions
 
 Bugs and issues
 ---------------
