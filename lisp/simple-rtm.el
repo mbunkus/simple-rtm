@@ -95,11 +95,12 @@
   :group 'simple-rtm-faces)
 
 (defvar simple-rtm-lists)
+(defvar simple-rtm-locations)
 (defvar simple-rtm-tasks)
 (defvar simple-rtm-data)
 (defvar simple-rtm-transaction-ids)
 
-(dolist (var '(simple-rtm-lists simple-rtm-tasks simple-rtm-data simple-rtm-transaction-ids))
+(dolist (var '(simple-rtm-lists simple-rtm-locations simple-rtm-tasks simple-rtm-data simple-rtm-transaction-ids))
   (make-variable-buffer-local var)
   (put var 'permanent-local t))
 
@@ -135,7 +136,7 @@
         map))
 
 (defun simple-rtm--buffer ()
-  (get-buffer-create "*simple-rtm*"))
+  (get-buffer-create "*SimpleRTM*"))
 
 (defun simple-rtm-mode ()
   (interactive)
@@ -594,6 +595,7 @@
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
     (setq simple-rtm-lists nil
+          simple-rtm-locations nil
           simple-rtm-tasks nil)
     (simple-rtm-reload)))
 
@@ -602,6 +604,8 @@
   (with-current-buffer (simple-rtm--buffer)
     (unless simple-rtm-lists
       (setq simple-rtm-lists (rtm-lists-get-list)))
+    (unless simple-rtm-locations
+      (setq simple-rtm-locations (rtm-locations-get-list)))
     (setq simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete"))
     (simple-rtm--build-data)
     (simple-rtm-redraw)))
