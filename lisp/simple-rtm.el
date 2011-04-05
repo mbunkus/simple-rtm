@@ -166,16 +166,60 @@
     (simple-rtm-reload))
   )
 
-;; initial-input collection error-msg-if-empty require-match
+(defun simple-rtm--completing-read-multiple-regex--complete ()
+  (interactive)
+  (let* ((input (minibuffer-completion-contents))
+         (reify (lambda (re)
+                  (setq re (getf re :regex))
+                  (concat "\\(?:\\s-\\|^\\)"
+                          (if (string-match-p "\\$$" re)
+                              re
+                            (concat re "$")))))
+         (match (cadar (sort (remove-if (lambda (entry) (not (car entry)))
+                                        (mapcar (lambda (entry)
+                                                  (list (string-match-p (funcall reify entry) input)
+                                                        entry))
+                                                table))
+                             (lambda (e1 e2)
+                               (> (car e1) (car e2)))))))
+    ;; (message "trying very hard: %s match %s" input (pp-to-string match))
+    (when match
+      (let ((minibuffer-completion-table (mapcar (lambda (string)
+                                                   (concat (or (getf match :prefix) "") string))
+                                                 (getf match :collection)))
+            (completion-all-sorted-completions nil)
+            (inhibit-read-only t)
+            (to-complete (save-match-data
+                           (string-match (funcall reify match) input)
+                           (match-string (if (listp (car match)) (cadr match) 1) input))))
+        (put-text-property (- (point) (length input)) (point-max)
+                           'field nil)
+        (put-text-property (- (point) (length to-complete) (length (getf match :prefix)))
+                           (point)
+                           'field t)
+        ;; (message "YEAH! for RE %s dump %s to-complete %s field %s" (funcall reify match) (pp-to-string (cadr match)) to-complete (field-string))
+        (call-interactively 'minibuffer-complete)))))
+
+(defun simple-rtm--completing-read-multiple-regex (prompt table &rest options)
+  (let ((map (copy-keymap minibuffer-local-map)))
+    (define-key map (kbd "TAB") 'simple-rtm--completing-read-multiple-regex--complete)
+    (read-from-minibuffer prompt
+                          (getf options :initial-input)
+                          map
+                          nil
+                          (getf options :history))))
+
 (defun simple-rtm--read (prompt &rest options)
-  (let ((result (if (getf options :collection)
-                    (funcall simple-rtm-completing-read-function
-                             prompt
-                             (getf options :collection)
-                             nil
-                             (getf options :require-match)
-                             (getf options :initial-input))
-                  (read-input prompt (getf options :initial-input)))))
+  (let ((result (cond ((getf options :collection)
+                       (funcall simple-rtm-completing-read-function
+                                prompt
+                                (getf options :collection)
+                                nil
+                                (getf options :require-match)
+                                (getf options :initial-input)))
+                      ((getf options :multi-collection)
+                       (simple-rtm--completing-read-multiple-regex prompt (getf options :multi-collection) options))
+                      (t (read-input prompt (getf options :initial-input))))))
     (if (and (getf options :error-msg-if-empty)
              (string= (or result "") ""))
         (error (getf options :error-msg-if-empty)))
@@ -393,6 +437,12 @@
               simple-rtm-locations)
       (error "No locations have been set yet.")))
 
+(defun simple-rtm--multi-collection-for-smart-add ()
+  `((:regex "!\\(.*\\)"   :prefix "!" :collection ("1" "2" "3" "4"))
+    (:regex "#\\(.*\\)"   :prefix "#" :collection ,(simple-rtm--list-names))
+    (:regex "@\\(.*\\)"   :prefix "@" :collection ,(simple-rtm--location-names))
+    (:regex "\\^\\(.*\\)" :prefix "^" :collection ("today" "tomorrow" "monday" "tuesday" "wednesday" "thursday" "friday" "saturday" "sunday"))))
+
 (defun simple-rtm--modify-task (id modifier)
   (dolist (list (getf simple-rtm-data :lists))
     (dolist (task (getf list :tasks))
@@ -583,9 +633,13 @@
   "Add a new task with smart add functionality.
 
 See http://www.rememberthemilk.com/services/smartadd/ for an
-explanation of the syntax supported."
+explanation of the syntax supported.
+
+Tab completion is supported for locations, lists, priorities and
+due dates."
   (rtm-tasks-add spec "1")
   :args (setq spec (simple-rtm--read "Task spec: "
+                                     :multi-collection (simple-rtm--multi-collection-for-smart-add)
                                      :error-msg-if-empty "Task spec must not be empty."))
   :no-tasks t
   :force-reload t)
