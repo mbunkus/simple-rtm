@@ -549,13 +549,6 @@
               note-text (simple-rtm--read "Note text: " nil nil "Note text must not be empty.")))
 
 (simple-rtm--defun-task-action
-  "set-duedate"
-  "Set the due date of the selected tasks."
-  (unless (string= duedate (simple-rtm--task-duedate task-node))
-    (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
-  :args (setq duedate (simple-rtm--read "New due date: " (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
-
-(simple-rtm--defun-task-action
   "smart-add"
   "Add a new task with smart add functionality.
 
