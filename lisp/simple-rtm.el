@@ -284,6 +284,20 @@
         default
       (format-time-string "%Y-%m-%d" (date-to-time duedate)))))
 
+(defun simple-rtm--format-duedate (duedate)
+  (let* ((today-sec (float-time (date-to-time (format-time-string "%Y-%m-%d 00:00:00"))))
+         (duedate-time (date-to-time (concat duedate " 00:00:00")))
+         (duedate-sec (float-time duedate-time))
+         (diff (- duedate-sec today-sec)))
+    (cond ((< diff 0) duedate)
+          ((< diff (* 60 60 24)) "Today")
+          ((< diff (* 60 60 24 2)) "Tomorrow")
+          ((< diff (* 60 60 24 7)) (format-time-string "%A" duedate-time))
+          ((< diff (* 60 60 24 90)) (format-time-string "%B %d" duedate-time))
+          (t duedate)
+          )
+    ))
+
 (defun simple-rtm--task< (t1 t2)
   (let* ((t1-task (car (xml-get-children (getf t1 :xml) 'task)))
          (t2-task (car (xml-get-children (getf t2 :xml) 'task)))
@@ -319,7 +333,7 @@
                                                (if (getf task :marked) "*" " ")
                                                priority-str
                                                (if duedate
-                                                   (propertize duedate
+                                                   (propertize (simple-rtm--format-duedate duedate)
                                                                'face (if (string< today duedate)
                                                                          'simple-rtm-task-duedate
                                                                        'simple-rtm-task-duedate-due)))
