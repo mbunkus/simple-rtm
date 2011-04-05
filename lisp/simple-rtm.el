@@ -94,6 +94,16 @@
   "Face for a task's URL."
   :group 'simple-rtm-faces)
 
+(defface simple-rtm-task-location
+  '((((class color) (background light))
+     :foreground "black"
+     :inherit simple-rtm-task)
+    (((class color) (background dark))
+     :foreground "grey100"
+     :inherit simple-rtm-task))
+  "Face for a task's URL."
+  :group 'simple-rtm-faces)
+
 (defvar simple-rtm-lists)
 (defvar simple-rtm-locations)
 (defvar simple-rtm-tasks)
@@ -299,6 +309,7 @@
                                      'face (intern (concat "simple-rtm-task-priority-" priority)))))
          (name (getf task :name))
          (url (xml-get-attribute taskseries-node 'url))
+         (location (simple-rtm--find-location-by 'id (xml-get-attribute taskseries-node 'location_id)))
          (duedate (simple-rtm--task-duedate task-node))
          (num-notes (- (length (car (xml-get-children taskseries-node 'notes))) 2))
          (today (format-time-string "%Y-%m-%d")))
@@ -315,6 +326,9 @@
                                                name
                                                (if (not (string= url ""))
                                                    (propertize url 'face 'simple-rtm-task-url))
+                                               (if location
+                                                   (propertize (concat "@" (xml-get-attribute location 'name))
+                                                               'face 'simple-rtm-task-location))
                                                (if (> num-notes 0)
                                                    (format "[%d]" num-notes))
                                                ))
@@ -348,6 +362,18 @@
                       (unless (string= (xml-get-attribute (getf list :xml) 'smart) "1")
                         (getf list :name)))
                     (getf simple-rtm-data :lists))))
+
+(defun simple-rtm--find-location-by (attribute value)
+  (if (and value (not (string= value "")))
+      (find-if (lambda (location)
+                 (string= (xml-get-attribute location attribute) value))
+               simple-rtm-locations)))
+
+(defun simple-rtm--location-names ()
+  (or (mapcar (lambda (location)
+                (xml-get-attribute location 'name))
+              simple-rtm-locations)
+      (error "No locations have been set yet.")))
 
 (defun simple-rtm--modify-task (id modifier)
   (dolist (list (getf simple-rtm-data :lists))
@@ -493,6 +519,14 @@
   :args (setq url (simple-rtm--read "New URL: " (xml-get-attribute (getf first-task :xml) 'url))))
 
 (simple-rtm--defun-task-action
+  "set-location"
+  "Set the location for the selected tasks."
+  (rtm-tasks-set-location list-id taskseries-id task-id (xml-get-attribute location 'id))
+  :args (setq location-name (simple-rtm--read "New location: " nil (simple-rtm--location-names) "Location must not be empty." t)
+              location (or (simple-rtm--find-location-by 'name location-name)
+                           (error "Location not found."))))
+
+(simple-rtm--defun-task-action
   "rename"
   "Rename the selected tasks."
   (unless (string= name (getf task :name))
@@ -629,13 +663,24 @@ explanation of the syntax supported."
           simple-rtm-tasks nil)
     (simple-rtm-reload)))
 
+(defun simple-rtm--load-locations ()
+  (setq simple-rtm-locations
+        (sort (mapcar (lambda (location)
+                        (simple-rtm--xml-set-attribute location 'name
+                                                       (decode-coding-string (xml-get-attribute location 'name)
+                                                                             'utf-8)))
+                      (rtm-locations-get-list))
+              (lambda (l1 l2)
+                (string< (downcase (xml-get-attribute l1 'name))
+                         (downcase (xml-get-attribute l2 'name)))))))
+
 (defun simple-rtm-reload ()
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
     (unless simple-rtm-lists
       (setq simple-rtm-lists (rtm-lists-get-list)))
     (unless simple-rtm-locations
-      (setq simple-rtm-locations (rtm-locations-get-list)))
+      (simple-rtm--load-locations))
     (setq simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete"))
     (simple-rtm--build-data)
     (simple-rtm-redraw)))
