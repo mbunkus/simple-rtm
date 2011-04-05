@@ -166,13 +166,19 @@
     (simple-rtm-reload))
   )
 
-(defun simple-rtm--read (prompt &optional initial-input collection error-msg-if-empty require-match)
-  (let ((result (if collection
-                    (funcall simple-rtm-completing-read-function prompt collection nil require-match initial-input)
-                  (read-input prompt initial-input))))
-    (if (and error-msg-if-empty
+;; initial-input collection error-msg-if-empty require-match
+(defun simple-rtm--read (prompt &rest options)
+  (let ((result (if (getf options :collection)
+                    (funcall simple-rtm-completing-read-function
+                             prompt
+                             (getf options :collection)
+                             nil
+                             (getf options :require-match)
+                             (getf options :initial-input))
+                  (read-input prompt (getf options :initial-input)))))
+    (if (and (getf options :error-msg-if-empty)
              (string= (or result "") ""))
-        (error error-msg-if-empty))
+        (error (getf options :error-msg-if-empty)))
     result))
 
 (defun simple-rtm--store-transaction-id (result)
@@ -521,20 +527,25 @@
   "Set the due date of the selected tasks."
   (unless (string= duedate (simple-rtm--task-duedate task-node))
     (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
-  :args (setq duedate (simple-rtm--read "New due date: " (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
+  :args (setq duedate (simple-rtm--read "New due date: "
+                                        :initial-input (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
 
 (simple-rtm--defun-task-action
   "set-url"
   "Set the URL of the selected tasks."
   (unless (string= url (xml-get-attribute taskseries-node 'url))
     (rtm-tasks-set-url list-id taskseries-id task-id url))
-  :args (setq url (simple-rtm--read "New URL: " (xml-get-attribute (getf first-task :xml) 'url))))
+  :args (setq url (simple-rtm--read "New URL: "
+                                    :initial-input (xml-get-attribute (getf first-task :xml) 'url))))
 
 (simple-rtm--defun-task-action
   "set-location"
   "Set the location for the selected tasks."
   (rtm-tasks-set-location list-id taskseries-id task-id (xml-get-attribute location 'id))
-  :args (setq location-name (simple-rtm--read "New location: " nil (simple-rtm--location-names) "Location must not be empty." t)
+  :args (setq location-name (simple-rtm--read "New location: "
+                                              :collection (simple-rtm--location-names)
+                                              :error-msg-if-empty "Location must not be empty."
+                                              :require-match t)
               location (or (simple-rtm--find-location-by 'name location-name)
                            (error "Location not found."))))
 
@@ -543,13 +554,18 @@
   "Rename the selected tasks."
   (unless (string= name (getf task :name))
     (rtm-tasks-set-name list-id taskseries-id task-id name))
-  :args (setq name (simple-rtm--read "Rename to: " (getf first-task :name) nil "Name must not be empty.")))
+  :args (setq name (simple-rtm--read "Rename to: "
+                                     :initial-input (getf first-task :name)
+                                     :error-msg-if-empty "Name must not be empty.")))
 
 (simple-rtm--defun-task-action
   "move"
   "Move selected tasks to another list."
   (rtm-tasks-move-to list-id (getf new-list :id) taskseries-id task-id)
-  :args (setq list-name (simple-rtm--read "New list: " nil (simple-rtm--list-names) "List must not be empty." t)
+  :args (setq list-name (simple-rtm--read "New list: "
+                                          :collection (simple-rtm--list-names)
+                                          :error-msg-if-empty "List must not be empty."
+                                          :require-match t)
               new-list (or (simple-rtm--find-list-by-name list-name)
                            (error "List not found."))))
 
@@ -557,8 +573,10 @@
   "add-note"
   "Add a note to the selected tasks."
   (rtm-tasks-notes-add list-id taskseries-id task-id note-title note-text)
-  :args (setq note-title (simple-rtm--read "Note title: " nil nil "Note title must not be empty.")
-              note-text (simple-rtm--read "Note text: " nil nil "Note text must not be empty.")))
+  :args (setq note-title (simple-rtm--read "Note title: "
+                                           :error-msg-if-empty "Note title must not be empty.")
+              note-text (simple-rtm--read "Note text: "
+                                          :error-msg-if-empty "Note text must not be empty.")))
 
 (simple-rtm--defun-task-action
   "smart-add"
@@ -567,7 +585,8 @@
 See http://www.rememberthemilk.com/services/smartadd/ for an
 explanation of the syntax supported."
   (rtm-tasks-add spec "1")
-  :args (setq spec (simple-rtm--read "Task spec: " nil nil "Task spec must not be empty."))
+  :args (setq spec (simple-rtm--read "Task spec: "
+                                     :error-msg-if-empty "Task spec must not be empty."))
   :no-tasks t
   :force-reload t)
 
