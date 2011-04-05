@@ -604,13 +604,10 @@
 (simple-rtm--defun-task-action
   "set-location"
   "Set the location for the selected tasks."
-  (rtm-tasks-set-location list-id taskseries-id task-id (xml-get-attribute location 'id))
+  (rtm-tasks-set-location list-id taskseries-id task-id (and location (xml-get-attribute location 'id)))
   :args (setq location-name (simple-rtm--read "New location: "
-                                              :collection (simple-rtm--location-names)
-                                              :error-msg-if-empty "Location must not be empty."
-                                              :require-match t)
-              location (or (simple-rtm--find-location-by 'name location-name)
-                           (error "Location not found."))))
+                                              :collection (simple-rtm--location-names))
+              location (simple-rtm--find-location-by 'name location-name)))
 
 (simple-rtm--defun-task-action
   "rename"
