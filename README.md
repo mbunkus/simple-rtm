@@ -52,6 +52,7 @@ Known issues
 ------------
 
 * Smart lists don't work yet.
+* Repeating tasks are completely untested and unsupported.
 
 Planned features
 ----------------
@@ -61,6 +62,8 @@ Planned features
 * Show full task details in other buffer
 * Show/edit/delete notes
 * Add docstrings to all interactive functions
+* Show/edit time estimations
+* Show/edit tags
 
 Bugs and issues
 ---------------
