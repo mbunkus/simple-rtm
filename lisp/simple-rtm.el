@@ -500,6 +500,14 @@
   :args (setq name (simple-rtm--read "Rename to: " (getf first-task :name) nil "Name must not be empty.")))
 
 (simple-rtm--defun-task-action
+  "move"
+  "Move selected tasks to another list."
+  (rtm-tasks-move-to list-id (getf new-list :id) taskseries-id task-id)
+  :args (setq list-name (simple-rtm--read "New list: " nil (simple-rtm--list-names) "List must not be empty." t)
+              new-list (or (simple-rtm--find-list-by-name list-name)
+                           (error "List not found."))))
+
+(simple-rtm--defun-task-action
   "add-note"
   "Add a note to the selected tasks."
   (rtm-tasks-notes-add list-id taskseries-id task-id note-title note-text)
