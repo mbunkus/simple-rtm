@@ -130,7 +130,10 @@
         (define-key map (kbd "2") 'simple-rtm-task-set-priority-2)
         (define-key map (kbd "3") 'simple-rtm-task-set-priority-3)
         (define-key map (kbd "4") 'simple-rtm-task-set-priority-none)
+        (define-key map (kbd "<deletechar>") 'simple-rtm-task-delete)
         (define-key map (kbd "<SPC>") 'simple-rtm-task-select-toggle-current)
+        (define-key map (kbd "C-d") 'simple-rtm-task-delete)
+        (define-key map (kbd "DEL") 'simple-rtm-task-delete)
         (define-key map (kbd "E a") 'simple-rtm-list-expand-all)
         (define-key map (kbd "E n") 'simple-rtm-list-collapse-all)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
@@ -571,6 +574,11 @@
   "complete"
   "Complete the selected tasks."
   (rtm-tasks-complete list-id taskseries-id task-id))
+
+(simple-rtm--defun-task-action
+  "delete"
+  "Delete the selected tasks."
+  (rtm-tasks-delete list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
   "set-duedate"
