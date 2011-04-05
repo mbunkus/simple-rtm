@@ -29,7 +29,7 @@ Installation
 Add the following to your startup file:
 
     (add-to-list 'load-path "/path/to/simple-rtm/lisp")
-    (autoload 'simple-rtm "simple-rtm" "Interactive mode for Remember The Milk" t)
+    (autoload 'simple-rtm-mode "simple-rtm" "Interactive mode for Remember The Milk" t)
 
 Then start it with:
 
