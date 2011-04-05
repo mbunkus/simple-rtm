@@ -294,9 +294,7 @@
           ((< diff (* 60 60 24 2)) "Tomorrow")
           ((< diff (* 60 60 24 7)) (format-time-string "%A" duedate-time))
           ((< diff (* 60 60 24 90)) (format-time-string "%B %d" duedate-time))
-          (t duedate)
-          )
-    ))
+          (t duedate))))
 
 (defun simple-rtm--task< (t1 t2)
   (let* ((t1-task (car (xml-get-children (getf t1 :xml) 'task)))
