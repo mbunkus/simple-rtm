@@ -515,7 +515,8 @@
      ,doc
      (interactive)
      ,@body
-     (simple-rtm-reload)))
+     (simple-rtm-reload)
+     (message "Done.")))
 
 (defmacro simple-rtm--defun-task-action (name doc body &rest options)
   (declare (indent 0))
@@ -531,6 +532,7 @@
        (let* ((selected-tasks ,(if (getf options :no-tasks) nil `(simple-rtm--selected-tasks)))
               (first-task (car selected-tasks))
               (previous-num-transactions (length (delq nil simple-rtm-transaction-ids)))
+              transaction-has-ids
               ,@vars)
          (simple-rtm--start-mass-transaction)
          (progn
@@ -546,12 +548,14 @@
                                                  (list-id (getf task :list-id))
                                                  (task-id (xml-get-attribute task-node 'id)))
                                             (simple-rtm--store-transaction-id ,body))))))
-         (if (not (car simple-rtm-transaction-ids))
-             (pop simple-rtm-transaction-ids))
+         (setq transaction-has-ids (car simple-rtm-transaction-ids))
+         (unless transaction-has-ids
+           (pop simple-rtm-transaction-ids))
          ,(if (getf options :force-reload)
               `(simple-rtm-reload)
             `(if (not (= previous-num-transactions (length (delq nil simple-rtm-transaction-ids))))
-                 (simple-rtm-reload)))))))
+                 (simple-rtm-reload)))
+         (message "Done. Actions can%s be undone." (if transaction-has-ids "" "not"))))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 0))
