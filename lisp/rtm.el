@@ -440,10 +440,8 @@ that will update rtm-auth-token"
   (setq rtm-auth-token
         (let ((auth-token (or (rtm-get-stored-auth-token)
                               rtm-auth-token)))
-          (if (and auth-token
-                   (rtm-auth-token-valid auth-token))
-              auth-token
-            (rtm-get-new-auth-token))))
+          (or auth-token
+              (rtm-get-new-auth-token))))
   rtm-auth-token)
 
 (defun rtm-auth-token-valid (auth-token)
