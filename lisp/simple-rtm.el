@@ -43,9 +43,9 @@
 
 (defface simple-rtm-task
   '((((class color) (background light))
-     :foreground "#a9a9a9")
+     :foreground "#e5e5e5")
     (((class color) (background dark))
-     :foreground "#bebebe"))
+     :foreground "#e5e5e5"))
   "Face for task names. Other task faces inherit from it."
   :group 'simple-rtm-faces)
 
