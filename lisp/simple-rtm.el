@@ -556,7 +556,7 @@
               `(simple-rtm-reload)
             `(if (not (= previous-num-transactions (length (delq nil simple-rtm-transaction-ids))))
                  (simple-rtm-reload)))
-         (message "Done. Actions can%s be undone." (if transaction-has-ids "" "not"))))))
+         (message (concat "Done." (if transaction-has-ids " Actions can be undone.")))))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 0))
