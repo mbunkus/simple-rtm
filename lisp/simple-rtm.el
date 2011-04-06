@@ -144,10 +144,12 @@
         (define-key map (kbd "E n") 'simple-rtm-list-collapse-all)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
         (define-key map (kbd "U") 'simple-rtm-undo)
+        (define-key map (kbd "a") 'simple-rtm-task-select-all-in-list)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
         (define-key map (kbd "l") 'simple-rtm-task-set-location)
         (define-key map (kbd "m") 'simple-rtm-task-move)
+        (define-key map (kbd "n") 'simple-rtm-task-select-none-in-list)
         (define-key map (kbd "p") 'simple-rtm-task-postpone)
         (define-key map (kbd "r") 'simple-rtm-task-rename)
         (define-key map (kbd "t") 'simple-rtm-task-smart-add)
@@ -712,6 +714,30 @@ due dates."
 (defun simple-rtm-task-select-none ()
   (interactive)
   (dolist (list (getf simple-rtm-data :lists))
+    (if (simple-rtm--list-visible-p list)
+        (dolist (task (getf list :tasks))
+          (simple-rtm--task-set-marked task 'unmark))))
+  (simple-rtm-redraw))
+
+(defun simple-rtm-task-select-all-in-list ()
+  (interactive)
+  "Mark all tasks in the list point is in.
+
+Will only mark the tasks if the list is expanded."
+  (let ((list (or (simple-rtm--find-list-at-point)
+                  (error "Not on a list"))))
+    (if (simple-rtm--list-visible-p list)
+        (dolist (task (getf list :tasks))
+          (simple-rtm--task-set-marked task 'mark))))
+  (simple-rtm-redraw))
+
+(defun simple-rtm-task-select-none-in-list ()
+  (interactive)
+  "Unmark all tasks in the list point is in.
+
+Will only unmark the tasks if the list is expanded."
+  (let ((list (or (simple-rtm--find-list-at-point)
+                  (error "Not on a list"))))
     (if (simple-rtm--list-visible-p list)
         (dolist (task (getf list :tasks))
           (simple-rtm--task-set-marked task 'unmark))))
