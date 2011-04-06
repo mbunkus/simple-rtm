@@ -143,7 +143,6 @@
         (define-key map (kbd "E a") 'simple-rtm-list-expand-all)
         (define-key map (kbd "E n") 'simple-rtm-list-collapse-all)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
-        (define-key map (kbd "U") 'simple-rtm-undo)
         (define-key map (kbd "a") 'simple-rtm-task-select-all-in-list)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
@@ -155,6 +154,7 @@
         (define-key map (kbd "t") 'simple-rtm-task-smart-add)
         (define-key map (kbd "u") 'simple-rtm-task-set-url)
         (define-key map (kbd "y") 'simple-rtm-task-add-note)
+        (define-key map (kbd "z") 'simple-rtm-undo)
         map))
 
 (defun simple-rtm--buffer ()
