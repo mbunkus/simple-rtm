@@ -387,29 +387,29 @@
          (duedate (simple-rtm--task-duedate task-node))
          (num-notes (- (length (car (xml-get-children taskseries-node 'notes))) 2))
          (today (format-time-string "%Y-%m-%d")))
-    (insert (propertize (mapconcat 'identity
-                                   (delq nil
-                                         (list ""
-                                               (if (getf task :marked) "*" " ")
-                                               priority-str
-                                               (if duedate
-                                                   (propertize (simple-rtm--format-duedate duedate)
-                                                               'face (if (string< today duedate)
-                                                                         'simple-rtm-task-duedate
-                                                                       'simple-rtm-task-duedate-due)))
-                                               (propertize name 'face 'simple-rtm-task)
-                                               (if (not (string= url ""))
-                                                   (propertize url 'face 'simple-rtm-task-url))
-                                               (if location
-                                                   (propertize (concat "@" (xml-get-attribute location 'name))
-                                                               'face 'simple-rtm-task-location))
-                                               (if (> num-notes 0)
-                                                   (format "[%d]" num-notes))
-                                               ))
-                                   " ")
+    (insert (propertize (concat (mapconcat 'identity
+                                           (delq nil
+                                                 (list ""
+                                                       (if (getf task :marked) "*" " ")
+                                                       priority-str
+                                                       (if duedate
+                                                           (propertize (simple-rtm--format-duedate duedate)
+                                                                       'face (if (string< today duedate)
+                                                                                 'simple-rtm-task-duedate
+                                                                               'simple-rtm-task-duedate-due)))
+                                                       (propertize name 'face 'simple-rtm-task)
+                                                       (if (not (string= url ""))
+                                                           (propertize url 'face 'simple-rtm-task-url))
+                                                       (if location
+                                                           (propertize (concat "@" (xml-get-attribute location 'name))
+                                                                       'face 'simple-rtm-task-location))
+                                                       (if (> num-notes 0)
+                                                           (format "[%d]" num-notes))
+                                                       ))
+                                           " ")
+                                "\n")
                         :list-id (getf task :list-id)
-                        :task-id (getf task :id))
-            "\n")))
+                        :task-id (getf task :id)))))
 
 (defun simple-rtm--find-list (id)
   (if id
