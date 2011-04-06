@@ -35,6 +35,13 @@ Then start it with:
 
     (simple-rtm-mode)
 
+Remember The Milk requires all applications to be authenticated by the
+user before they can access the user's data. The first time SimpleRTM
+starts and connects to Remember The Milk it will tell you to open a
+specific URL. Copy &amp; paste this URL into a browser or your choice,
+follow the instructions on the screen, return to Emacs and press
+enter.
+
 Limitations
 -----------
 
