@@ -389,7 +389,7 @@
                                                                'face (if (string< today duedate)
                                                                          'simple-rtm-task-duedate
                                                                        'simple-rtm-task-duedate-due)))
-                                               name
+                                               (propertize name 'face 'simple-rtm-task)
                                                (if (not (string= url ""))
                                                    (propertize url 'face 'simple-rtm-task-url))
                                                (if location
