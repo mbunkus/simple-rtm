@@ -81,6 +81,9 @@ API Kit"
   "Auth token received from RTM Website, after the user authenticated
   your app")
 
+(defvar rtm-auth-token-valid nil
+  "Set to t after the auth token has been validated.")
+
 (defconst rtm-ui-buffer-name "*rtm*"
   "Name for the rtm user interface buffer")
 
@@ -92,6 +95,9 @@ API Kit"
 
 (defvar rtm-debug nil
   "debug level")
+
+(make-variable-buffer-local 'rtm-auth-token-valid)
+(put 'rtm-auth-token-valid 'permanent-local t)
 
 ;;;; API wrappers
 (defmacro def-rtm-method (methodname rtm-method-name call-func result-func
@@ -440,16 +446,20 @@ that will update rtm-auth-token"
   (setq rtm-auth-token
         (let ((auth-token (or (rtm-get-stored-auth-token)
                               rtm-auth-token)))
-          (or auth-token
-              (rtm-get-new-auth-token))))
+          (if (and auth-token
+                   (rtm-auth-token-valid auth-token))
+              auth-token
+            (rtm-get-new-auth-token))))
   rtm-auth-token)
 
 (defun rtm-auth-token-valid (auth-token)
-  (let ((token (ignore-errors (rtm-auth-check-token auth-token))))
-    (if (and token
-             (string-equal auth-token token))
-        t
-      nil)))
+  (if rtm-auth-token-valid
+      t
+    (let ((token (ignore-errors (rtm-auth-check-token auth-token))))
+      (if (and token
+               (string-equal auth-token token))
+          (setq rtm-auth-token-valid t)
+        nil))))
 
 (defun rtm-get-new-auth-token ()
   (let* ((frob (rtm-auth-get-frob))
