@@ -22,65 +22,65 @@
 
 (defface simple-rtm-list
   '((((class color) (background light))
-     :foreground "grey30")
+     :foreground "#696969")
     (((class color) (background dark))
-     :foreground "grey100"))
+     :foreground "#ffffff"))
   "Face for lists."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-smart-list
   '((((class color) (background light))
-     :foreground "lightblue")
+     :foreground "#00bbff")
     (((class color) (background dark))
-     :foreground "lightblue"))
+     :foreground "#00bbff"))
   "Face for smart lists."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-task
   '((((class color) (background light))
-     :foreground "grey60")
+     :foreground "#a9a9a9")
     (((class color) (background dark))
-     :foreground "grey60"))
+     :foreground "#bebebe"))
   "Face for task names. Other task faces inherit from it."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-task-priority-1
   '((((class color) (background light))
-     :foreground "brightyellow" :inherit simple-rtm-task)
+     :foreground "#ffd700" :inherit simple-rtm-task)
     (((class color) (background dark))
-     :foreground "brightyellow" :inherit simple-rtm-task))
+     :foreground "#ffd700" :inherit simple-rtm-task))
   "Face for priority 1 tasks."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-task-priority-2
   '((((class color) (background light))
-     :foreground "brightblue" :inherit simple-rtm-task)
+     :foreground "#00ffff" :inherit simple-rtm-task)
     (((class color) (background dark))
-     :foreground "brightblue" :inherit simple-rtm-task))
+     :foreground "#00ffff" :inherit simple-rtm-task))
   "Face for priority 2 tasks."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-task-priority-3
   '((((class color) (background light))
-     :foreground "blue" :inherit simple-rtm-task)
+     :foreground "#0033ff" :inherit simple-rtm-task)
     (((class color) (background dark))
-     :foreground "blue" :inherit simple-rtm-task))
+     :foreground "#0033ff" :inherit simple-rtm-task))
   "Face for priority 3 tasks."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-task-duedate
   '((((class color) (background light))
-     :foreground "lightgreen" :inherit simple-rtm-task)
+     :foreground "#00ff00" :inherit simple-rtm-task)
     (((class color) (background dark))
-     :foreground "lightgreen" :inherit simple-rtm-task))
+     :foreground "#00ff00" :inherit simple-rtm-task))
   "Face for the task's due date."
   :group 'simple-rtm-faces)
 
 (defface simple-rtm-task-duedate-due
   '((((class color) (background light))
-     :foreground "grey100" :background "red" :inherit simple-rtm-task)
+     :foreground "#ffffff" :background "red" :inherit simple-rtm-task)
     (((class color) (background dark))
-     :foreground "grey100" :background "red" :inherit simple-rtm-task))
+     :foreground "#ffffff" :background "red" :inherit simple-rtm-task))
   "Face for the task's due date if the task is due."
   :group 'simple-rtm-faces)
 
@@ -96,10 +96,10 @@
 
 (defface simple-rtm-task-location
   '((((class color) (background light))
-     :foreground "black"
+     :foreground "#000000"
      :inherit simple-rtm-task)
     (((class color) (background dark))
-     :foreground "grey100"
+     :foreground "#ffffff"
      :inherit simple-rtm-task))
   "Face for a task's URL."
   :group 'simple-rtm-faces)
