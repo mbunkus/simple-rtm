@@ -109,6 +109,14 @@
   "Face for a task's URL."
   :group 'simple-rtm-faces)
 
+(defface simple-rtm-task-time-estimate
+  '((((class color) (background light))
+     :foreground "#ff00ff" :inherit simple-rtm-task)
+    (((class color) (background dark))
+     :foreground "#ff00ff" :inherit simple-rtm-task))
+  "Face for the task's time estimate."
+  :group 'simple-rtm-faces)
+
 (defvar simple-rtm-lists)
 (defvar simple-rtm-locations)
 (defvar simple-rtm-tasks)
@@ -146,6 +154,7 @@
         (define-key map (kbd "a") 'simple-rtm-task-select-all-in-list)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
+        (define-key map (kbd "g") 'simple-rtm-task-set-time-estimate)
         (define-key map (kbd "l") 'simple-rtm-task-set-location)
         (define-key map (kbd "m") 'simple-rtm-task-move)
         (define-key map (kbd "n") 'simple-rtm-task-select-none-in-list)
@@ -387,6 +396,7 @@
          (url (xml-get-attribute taskseries-node 'url))
          (location (simple-rtm--find-location-by 'id (xml-get-attribute taskseries-node 'location_id)))
          (duedate (simple-rtm--task-duedate task-node))
+         (time-estimate (xml-get-attribute task-node 'estimate))
          (num-notes (- (length (car (xml-get-children taskseries-node 'notes))) 2))
          (today (format-time-string "%Y-%m-%d")))
     (insert (propertize (concat (mapconcat 'identity
@@ -400,6 +410,8 @@
                                                                                  'simple-rtm-task-duedate
                                                                                'simple-rtm-task-duedate-due)))
                                                        (propertize name 'face 'simple-rtm-task)
+                                                       (if (not (string= time-estimate ""))
+                                                           (propertize time-estimate 'face 'simple-rtm-task-time-estimate))
                                                        (if (not (string= url ""))
                                                            (propertize url 'face 'simple-rtm-task-url))
                                                        (if location
@@ -605,6 +617,15 @@
     (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
   :args (setq duedate (simple-rtm--read "New due date: "
                                         :initial-input (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
+
+(simple-rtm--defun-task-action
+  "set-time-estimate"
+  "Set the time estimate of the selected tasks."
+  (unless (string= time-estimate (xml-get-attribute task-node 'estimate))
+    (rtm-tasks-set-estimate list-id taskseries-id task-id time-estimate))
+  :args (setq time-estimate (simple-rtm--read "New time estimate: "
+                                              :initial-input (xml-get-attribute (car (xml-get-children (getf first-task :xml) 'task))
+                                                                                'estimate))))
 
 (simple-rtm--defun-task-action
   "set-url"
