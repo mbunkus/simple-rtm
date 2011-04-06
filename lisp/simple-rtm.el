@@ -14,6 +14,11 @@
 		(function-item iswitchb-completing-read)
 		(function :tag "Other")))
 
+(defcustom simple-rtm-use-default-list-for-new-tasks t
+  "Add the list at point to the task spec if no list is given when adding tasks."
+  :group 'simple-rtm
+  :type 'boolean)
+
 (defgroup simple-rtm-faces nil
   "Customize the appearance of SimpleRTM"
   :prefix "simple-rtm-"
@@ -283,9 +288,12 @@
 (defun simple-rtm--list-visible-p (list-or-id)
   (not (member (simple-rtm--overlay-name list-or-id) buffer-invisibility-spec)))
 
+(defun simple-rtm--list-smart-p (list)
+  (string= (xml-get-attribute (getf list :xml) 'smart) "1"))
+
 (defun simple-rtm--render-list-header (list)
   (let ((name (getf list :name))
-        (is-smart (string= (xml-get-attribute (getf list :xml) 'smart) "1")))
+        (is-smart (simple-rtm--list-smart-p list)))
     (insert (propertize (concat "["
                                 (cond ((not (getf list :tasks)) " ")
                                       ((getf list :expanded) "-")
@@ -414,6 +422,9 @@
       (find-if (lambda (list)
                  (string= (getf list :name) name))
                (getf simple-rtm-data :lists))))
+
+(defun simple-rtm--find-list-at-point ()
+  (simple-rtm--find-list (get-text-property (point) :list-id)))
 
 (defun simple-rtm--find-task-at-point ()
   (let ((list (simple-rtm--find-list (get-text-property (point) :list-id)))
@@ -648,9 +659,17 @@ explanation of the syntax supported.
 Tab completion is supported for locations, lists, priorities and
 due dates."
   (rtm-tasks-add spec "1")
-  :args (setq spec (simple-rtm--read "Task spec: "
-                                     :multi-collection (simple-rtm--multi-collection-for-smart-add)
-                                     :error-msg-if-empty "Task spec must not be empty."))
+  :args (setq spec-raw (simple-rtm--read "Task spec: "
+                                         :multi-collection (simple-rtm--multi-collection-for-smart-add)
+                                         :error-msg-if-empty "Task spec must not be empty.")
+              spec (or (if (and simple-rtm-use-default-list-for-new-tasks
+                                (not (string-match-p "\\s-#." spec-raw)))
+                           (let* ((list (simple-rtm--find-list-at-point))
+                                  (name (or (getf list :name) "")))
+                             (if (not (or (string= name "")
+                                          (simple-rtm--list-smart-p list)))
+                               (concat spec-raw " #" name))))
+                       spec-raw))
   :no-tasks t
   :force-reload t)
 
