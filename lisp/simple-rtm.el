@@ -117,6 +117,14 @@
   "Face for the task's time estimate."
   :group 'simple-rtm-faces)
 
+(defface simple-rtm-note-title
+  '((((class color) (background light))
+     :foreground "#000000" :inherit simple-rtm-task)
+    (((class color) (background dark))
+     :foreground "#ffffff" :inherit simple-rtm-task))
+  "Face for note titles."
+  :group 'simple-rtm-faces)
+
 (defvar simple-rtm-lists)
 (defvar simple-rtm-locations)
 (defvar simple-rtm-tasks)
@@ -150,6 +158,7 @@
         (define-key map (kbd "DEL") 'simple-rtm-task-delete)
         (define-key map (kbd "E a") 'simple-rtm-list-expand-all)
         (define-key map (kbd "E n") 'simple-rtm-list-collapse-all)
+        (define-key map (kbd "RET") 'simple-rtm-task-show-details)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
         (define-key map (kbd "a") 'simple-rtm-task-select-all-in-list)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
@@ -166,8 +175,48 @@
         (define-key map (kbd "z") 'simple-rtm-undo)
         map))
 
+(defvar simple-rtm-details-mode-map nil
+  "The mode map for the task details.")
+(setf simple-rtm-details-mode-map
+      (let ((map (make-keymap)))
+        (suppress-keymap map t)
+        (define-key map (kbd "$") 'simple-rtm-reload)
+        (define-key map (kbd "%") 'simple-rtm-reload-all)
+        (define-key map (kbd ".") 'simple-rtm-redraw)
+        (define-key map (kbd "<deletechar>") 'simple-rtm-task-delete-note)
+        (define-key map (kbd "C-d") 'simple-rtm-task-delete-note)
+        (define-key map (kbd "DEL") 'simple-rtm-task-delete-note)
+        (define-key map (kbd "RET") 'simple-rtm-task-set-thing-at-point)
+        (define-key map (kbd "1") 'simple-rtm-task-set-priority-1)
+        (define-key map (kbd "2") 'simple-rtm-task-set-priority-2)
+        (define-key map (kbd "3") 'simple-rtm-task-set-priority-3)
+        (define-key map (kbd "4") 'simple-rtm-task-set-priority-none)
+        (define-key map (kbd "c") 'simple-rtm-task-complete)
+        (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
+        (define-key map (kbd "e") 'simple-rtm-task-edit-note)
+        (define-key map (kbd "g") 'simple-rtm-task-set-time-estimate)
+        (define-key map (kbd "l") 'simple-rtm-task-set-location)
+        (define-key map (kbd "m") 'simple-rtm-task-move)
+        (define-key map (kbd "p") 'simple-rtm-task-postpone)
+        (define-key map (kbd "q") 'simple-rtm-quit-details)
+        (define-key map (kbd "r") 'simple-rtm-task-rename)
+        (define-key map (kbd "t") 'simple-rtm-task-smart-add)
+        (define-key map (kbd "u") 'simple-rtm-task-set-url)
+        (define-key map (kbd "y") 'simple-rtm-task-add-note)
+        (define-key map (kbd "z") 'simple-rtm-undo)
+        map))
+
 (defun simple-rtm--buffer ()
   (get-buffer-create "*SimpleRTM*"))
+
+(defconst simple-rtm--details-buffer-name
+  "*SimpleRTM task details*")
+
+(defun simple-rtm--details-buffer ()
+  (get-buffer-create simple-rtm--details-buffer-name))
+
+(defun simple-rtm--details-buffer-visible-p ()
+  (get-buffer simple-rtm--details-buffer-name))
 
 (defun simple-rtm-mode ()
   (interactive)
@@ -259,18 +308,31 @@
 (defun simple-rtm--last-mass-transaction ()
   (car (delq nil simple-rtm-transaction-ids)))
 
+(defmacro simple-rtm--with-buffer-and-window (buffer-or-name &rest body)
+  (declare (indent 1) (debug t))
+  (let ((buffer (make-symbol "*buffer*"))
+        (window (make-symbol "*window*")))
+    `(let* ((,buffer (get-buffer ,buffer-or-name))
+            (,window (get-buffer-window ,buffer)))
+       (with-current-buffer ,buffer
+         (if ,window
+             (with-selected-window ,window
+               ,@body)
+           ,@body)))))
+
 (defmacro simple-rtm--save-pos (&rest body)
   (declare (indent 0))
   (let ((list-id (make-symbol "*list-id*"))
         (task-id (make-symbol "*task-id*"))
         (found (make-symbol "*found*")))
-    `(let ((,list-id (get-text-property (point) :list-id))
-           (,task-id (get-text-property (point) :task-id)))
-       ,@body
-       (unless (simple-rtm--list-visible-p ,list-id)
-         (setf ,task-id nil))
-       (if (not (simple-rtm--goto ,list-id ,task-id))
-           (goto-char (point-min))))))
+    `(simple-rtm--with-buffer-and-window (simple-rtm--buffer)
+       (let ((,list-id (get-text-property (point) :list-id))
+             (,task-id (get-text-property (point) :task-id)))
+         ,@body
+         (unless (simple-rtm--list-visible-p ,list-id)
+           (setf ,task-id nil))
+         (if (not (simple-rtm--goto ,list-id ,task-id))
+             (goto-char (point-min)))))))
 
 (defun simple-rtm--goto (list-id &optional task-id)
   (let (found list-at)
@@ -397,7 +459,8 @@
          (location (simple-rtm--find-location-by 'id (xml-get-attribute taskseries-node 'location_id)))
          (duedate (simple-rtm--task-duedate task-node))
          (time-estimate (xml-get-attribute task-node 'estimate))
-         (num-notes (- (length (car (xml-get-children taskseries-node 'notes))) 2))
+         (num-notes (length (xml-get-children (car (xml-get-children taskseries-node 'notes))
+                                              'note)))
          (today (format-time-string "%Y-%m-%d")))
     (insert (propertize (concat (mapconcat 'identity
                                            (delq nil
@@ -418,7 +481,8 @@
                                                            (propertize (concat "@" (xml-get-attribute location 'name))
                                                                        'face 'simple-rtm-task-location))
                                                        (if (> num-notes 0)
-                                                           (format "[%d]" num-notes))
+                                                           (propertize (format "[%d]" num-notes)
+                                                                       'face 'simple-rtm-note-title))
                                                        ))
                                            " ")
                                 "\n")
@@ -460,6 +524,17 @@
                  (string= (xml-get-attribute location attribute) value))
                simple-rtm-locations)))
 
+(defun simple-rtm--find-list-and-task (list-id task-id)
+  (with-current-buffer (simple-rtm--buffer)
+    (let ((list (simple-rtm--find-list list-id))
+          task)
+      (when list (setq task
+                       (find-if (lambda (task)
+                                  (string= (getf task :id) task-id))
+                                (getf list :tasks))))
+      (if (and list task)
+          (cons list task)))))
+
 (defun simple-rtm--location-names ()
   (or (mapcar (lambda (location)
                 (xml-get-attribute location 'name))
@@ -479,13 +554,19 @@
           (funcall modifier task)))))
 
 (defun simple-rtm--selected-tasks ()
-  (or (apply 'append
+  (or (when (and (simple-rtm--details-buffer-visible-p)
+                 (eq (current-buffer) (simple-rtm--details-buffer)))
+        (delq nil (list (cdr (simple-rtm--find-list-and-task (getf simple-rtm-data :list-id)
+                                                             (getf simple-rtm-data :task-id))))))
+      (apply 'append
              (mapcar (lambda (list)
                        (if (simple-rtm--list-visible-p list)
                            (remove-if (lambda (task) (not (getf task :marked)))
                                       (getf list :tasks))))
-                     (getf simple-rtm-data :lists)))
-      (delq nil (list (simple-rtm--find-task-at-point)))
+                     (with-current-buffer (simple-rtm--buffer)
+                       (getf simple-rtm-data :lists))))
+      (delq nil (list (with-current-buffer (simple-rtm--buffer)
+                        (simple-rtm--find-task-at-point))))
       (error "No task selected and point not on a task")))
 
 (defun simple-rtm--list-set-expansion (list action)
@@ -540,7 +621,8 @@
   `(defun ,(intern (concat "simple-rtm-" name)) ()
      ,doc
      (interactive)
-     ,@body
+     (with-current-buffer (simple-rtm--buffer)
+       ,@body)
      (simple-rtm-reload)
      (message "Done.")))
 
@@ -557,31 +639,32 @@
        (interactive)
        (let* ((selected-tasks ,(if (getf options :no-tasks) nil `(simple-rtm--selected-tasks)))
               (first-task (car selected-tasks))
-              (previous-num-transactions (length (delq nil simple-rtm-transaction-ids)))
-              transaction-has-ids
+              previous-num-transactions transaction-has-ids
               ,@vars)
-         (simple-rtm--start-mass-transaction)
-         (progn
-           ,args)
-         ,(if (getf options :no-tasks)
-              (progn body)
-            `(dolist (current-task selected-tasks)
-               (simple-rtm--modify-task (getf current-task :id)
-                                        (lambda (task)
-                                          (let* ((taskseries-node (getf task :xml))
-                                                 (task-node (car (xml-get-children taskseries-node 'task)))
-                                                 (taskseries-id (getf task :id))
-                                                 (list-id (getf task :list-id))
-                                                 (task-id (xml-get-attribute task-node 'id)))
-                                            (simple-rtm--store-transaction-id ,body))))))
-         (setq transaction-has-ids (car simple-rtm-transaction-ids))
-         (unless transaction-has-ids
-           (pop simple-rtm-transaction-ids))
-         ,(if (getf options :force-reload)
-              `(simple-rtm-reload)
-            `(if (not (= previous-num-transactions (length (delq nil simple-rtm-transaction-ids))))
-                 (simple-rtm-reload)))
-         (message (concat "Done." (if transaction-has-ids " Actions can be undone.")))))))
+         (with-current-buffer (simple-rtm--buffer)
+           (setq previous-num-transactions (length (delq nil simple-rtm-transaction-ids)))
+           (simple-rtm--start-mass-transaction)
+           (progn
+             ,args)
+           ,(if (getf options :no-tasks)
+                (progn body)
+              `(dolist (current-task selected-tasks)
+                 (simple-rtm--modify-task (getf current-task :id)
+                                          (lambda (task)
+                                            (let* ((taskseries-node (getf task :xml))
+                                                   (task-node (car (xml-get-children taskseries-node 'task)))
+                                                   (taskseries-id (getf task :id))
+                                                   (list-id (getf task :list-id))
+                                                   (task-id (xml-get-attribute task-node 'id)))
+                                              (simple-rtm--store-transaction-id ,body))))))
+           (setq transaction-has-ids (car simple-rtm-transaction-ids))
+           (unless transaction-has-ids
+             (pop simple-rtm-transaction-ids))
+           ,(if (getf options :force-reload)
+                `(simple-rtm-reload)
+              `(if (not (= previous-num-transactions (length (delq nil simple-rtm-transaction-ids))))
+                   (simple-rtm-reload)))
+           (message (concat "Done." (if transaction-has-ids " Actions can be undone."))))))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
   (declare (indent 0))
@@ -609,6 +692,15 @@
   "delete"
   "Delete the selected tasks."
   (rtm-tasks-delete list-id taskseries-id task-id))
+
+(simple-rtm--defun-task-action
+  "set-priority"
+  "Set the priority of the selected tasks."
+  (unless (string= priority (xml-get-attribute task-node 'priority))
+    (rtm-tasks-set-priority list-id taskseries-id task-id priority))
+  :args (setq priority (simple-rtm--read "New priority: "
+                                         :initial-input (xml-get-attribute (car (xml-get-children (getf first-task :xml) 'task))
+                                                                           'priority))))
 
 (simple-rtm--defun-task-action
   "set-duedate"
@@ -705,6 +797,120 @@ due dates."
     (dolist (id transaction-ids)
       (rtm-transactions-undo id))
     (setf simple-rtm-transaction-ids (cdr (delq nil simple-rtm-transaction-ids)))))
+
+(defun simple-rtm-task-show-details ()
+  (interactive)
+  "Show all details of the task at point in another window."
+  (let* ((task (or (simple-rtm--find-task-at-point)
+                   (error "No task at point.")))
+         (buffer (simple-rtm--details-buffer))
+         (window (get-buffer-window buffer)))
+    (if window
+        (select-window window)
+      (switch-to-buffer-other-window buffer))
+    (simple-rtm-details-mode task)))
+
+(defun simple-rtm-details-mode (task)
+  (setq major-mode 'simple-rtm-details-mode
+        mode-name "SimpleRTM-details"
+        mode-line-process ""
+        buffer-read-only t
+        simple-rtm-data (list :task-id (getf task :id)
+                              :list-id (getf task :list-id)))
+  (use-local-map simple-rtm-details-mode-map)
+  (simple-rtm--redraw-task-details))
+
+(defun simple-rtm--redraw-task-details ()
+  (let ((buffer (simple-rtm--details-buffer)))
+    (simple-rtm--with-buffer-and-window buffer
+      (let ((list-and-task (simple-rtm--find-list-and-task (getf simple-rtm-data :list-id)
+                                                           (getf simple-rtm-data :task-id))))
+        (if (not list-and-task)
+            (let ((window (get-buffer-window buffer)))
+              (kill-buffer buffer)
+              (if window
+                  (delete-window window)))
+          (let* ((list (car list-and-task))
+                 (task (cdr list-and-task))
+                 (taskseries-node (getf task :xml))
+                 (task-node (car (xml-get-children taskseries-node 'task)))
+                 (priority (xml-get-attribute task-node 'priority))
+                 (priority-str (if (string= priority "N")
+                                   "none"
+                                 (propertize (concat "P" priority)
+                                             'face (intern (concat "simple-rtm-task-priority-" priority)))))
+                 (name (getf task :name))
+                 (url (xml-get-attribute taskseries-node 'url))
+                 (url-str (if (not (string= url ""))
+                              (propertize url 'face 'simple-rtm-task-url)
+                            "none"))
+                 (location (simple-rtm--find-location-by 'id (xml-get-attribute taskseries-node 'location_id)))
+                 (location-str (if location
+                                   (propertize (xml-get-attribute location 'name) 'face 'simple-rtm-task-location)
+                                 "none"))
+                 (duedate (simple-rtm--task-duedate task-node))
+                 (duedate-str (if duedate
+                                  (propertize (simple-rtm--format-duedate duedate)
+                                              'face (if (string< today duedate)
+                                                        'simple-rtm-task-duedate
+                                                      'simple-rtm-task-duedate-due))
+                                "never"))
+                 (time-estimate (xml-get-attribute task-node 'estimate))
+                 (time-estimate-str (if (not (string= time-estimate ""))
+                                        (propertize time-estimate 'face 'simple-rtm-task-time-estimate)
+                                      "none"))
+                 (notes (xml-get-children (car (xml-get-children taskseries-node 'notes))
+                                          'note))
+                 (note-num 0)
+                 (today (format-time-string "%Y-%m-%d"))
+                 (inhibit-read-only t)
+                 (content (lambda (func &rest text)
+                            (propertize (concat (apply 'concat text) "\n")
+                                        :change-func (intern (concat "simple-rtm-task-" (symbol-name func))))))
+                 pos)
+
+            (setq pos (cons (line-number-at-pos) (current-column)))
+            (erase-buffer)
+
+            (insert (funcall content 'rename (propertize name 'face 'simple-rtm-task))
+                    "\n"
+                    (funcall content 'set-priority      "Priority:      " priority-str)
+                    (funcall content 'set-duedate       "Due:           " duedate-str)
+                    (funcall content 'set-time-estimate "Time estimate: " time-estimate-str)
+                    (funcall content 'set-location      "Location:      " location-str)
+                    (funcall content 'set-url           "URL:           " url-str)
+                    "\n")
+
+            (dolist (note notes)
+              (setq note-num (1+ note-num))
+              (let ((beg (point)))
+                (insert "Note " (format "%d" note-num) ": "
+                        (propertize (decode-coding-string (xml-get-attribute note 'title) 'utf-8)
+                                    'face 'simple-rtm-note-title)
+                        "\n"
+                        (decode-coding-string (caddr note) 'utf-8)
+                        "\n\n")
+                (put-text-property beg (point) :note-id (xml-get-attribute note 'id))
+                (put-text-property beg (point) :change-func 'simple-rtm-task-edit-note)))
+
+            (put-text-property (point-min) (point-max) :task-id (getf simple-rtm-data :task-id))
+            (put-text-property (point-min) (point-max) :list-id (getf simple-rtm-data :list-id))
+
+            (goto-char (point-min))
+            (ignore-errors
+              (forward-line (1- (car pos)))
+              (move-to-column (cdr pos)))))))))
+
+(defun simple-rtm-task-set-thing-at-point ()
+  (interactive)
+  (call-interactively (or (get-text-property (point) :change-func)
+                          (error "There's nothing to change here."))))
+
+(defun simple-rtm-quit-details ()
+  (interactive)
+  (quit-window t)
+  (ignore-errors
+    (delete-window)))
 
 (defun simple-rtm-task-select-toggle-current ()
   (interactive)
@@ -847,6 +1053,8 @@ Will only unmark the tasks if the list is expanded."
         (erase-buffer)
         (setq buffer-invisibility-spec nil)
         (dolist (list (getf simple-rtm-data :lists))
-          (simple-rtm--render-list list))))))
+          (simple-rtm--render-list list)))))
+  (if (simple-rtm--details-buffer-visible-p)
+      (simple-rtm--redraw-task-details)))
 
 (provide 'simple-rtm)

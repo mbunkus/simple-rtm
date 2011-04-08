@@ -66,8 +66,7 @@ Planned features
 
 * Make fewer calls to RTM after each action (parse and integrate each
   call's result instead of reloading all tasks).
-* Show full task details in other buffer
-* Show/edit/delete notes
+* Edit/delete notes
 * Add docstrings to all interactive functions
 * Show/edit tags
 
