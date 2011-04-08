@@ -535,6 +535,13 @@
       (if (and list task)
           (cons list task)))))
 
+(defun simple-rtm--find-note (taskseries-node note-id)
+  (if (and taskseries-node note-id)
+      (find-if (lambda (note)
+                 (string= (xml-get-attribute note 'id) note-id))
+               (xml-get-children (car (xml-get-children taskseries-node 'notes))
+                                 'note))))
+
 (defun simple-rtm--location-names ()
   (or (mapcar (lambda (location)
                 (xml-get-attribute location 'name))
@@ -639,6 +646,10 @@
        (interactive)
        (let* ((selected-tasks ,(if (getf options :no-tasks) nil `(simple-rtm--selected-tasks)))
               (first-task (car selected-tasks))
+              (note ,(if (getf options :with-note)
+                         '(or (simple-rtm--find-note (getf first-task :xml)
+                                                     (get-text-property (point) :note-id))
+                              (error "No note found at point."))))
               previous-num-transactions transaction-has-ids
               ,@vars)
          (with-current-buffer (simple-rtm--buffer)
@@ -763,6 +774,12 @@
                                            :error-msg-if-empty "Note title must not be empty.")
               note-text (simple-rtm--read "Note text: "
                                           :error-msg-if-empty "Note text must not be empty.")))
+
+(simple-rtm--defun-task-action
+  "delete-note"
+  "Delete the selected note."
+  (rtm-tasks-notes-delete (xml-get-attribute note 'id))
+  :with-note t)
 
 (simple-rtm--defun-task-action
   "smart-add"
