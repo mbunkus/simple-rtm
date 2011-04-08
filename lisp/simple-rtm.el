@@ -441,8 +441,8 @@
          (t2-prio (xml-get-attribute t2-task 'priority))
          (t1-name (downcase (getf t1 :name)))
          (t2-name (downcase (getf t2 :name))))
-    (= -1 (or (simple-rtm--cmp t1-due t2-due)
-              (simple-rtm--cmp t1-prio t2-prio)
+    (= -1 (or (simple-rtm--cmp t1-prio t2-prio)
+              (simple-rtm--cmp t1-due t2-due)
               (simple-rtm--cmp t1-name t2-name)
               0))))
 
