@@ -782,6 +782,19 @@
   :with-note t)
 
 (simple-rtm--defun-task-action
+  "edit-note"
+  "Edit the selected note."
+  (rtm-tasks-notes-edit (xml-get-attribute note 'id) note-title note-text)
+  :with-note t
+  :force-reload t
+  :args (setq note-title (simple-rtm--read "Note title: "
+                                           :error-msg-if-empty "Note title must not be empty."
+                                           :initial-input (decode-coding-string (xml-get-attribute note 'title) 'utf-8))
+              note-text (simple-rtm--read "Note text: "
+                                          :error-msg-if-empty "Note text must not be empty."
+                                          :initial-input (decode-coding-string (caddr note) 'utf-8))))
+
+(simple-rtm--defun-task-action
   "smart-add"
   "Add a new task with smart add functionality.
 
