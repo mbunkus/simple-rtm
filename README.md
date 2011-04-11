@@ -11,7 +11,8 @@ Overview
 This is an interactive "do everything right now" kind of interface to
 Remember The Milk (RTM). Upon start it will query RTM for all of your
 lists and incomplete tasks and show them. Each list can be expanded
-and collapsed. Tasks can be acted upon with single key strokes.
+and collapsed. Tasks can be acted upon with single key strokes. These
+key strokes are modeled after RTM's JavaScript based web interface.
 
 You can mark tasks and act upon multiple tasks at once. However, only
 marked tasks that are currently visible (meaning that the list they
@@ -66,7 +67,6 @@ Planned features
 
 * Make fewer calls to RTM after each action (parse and integrate each
   call's result instead of reloading all tasks).
-* Add docstrings to all interactive functions
 * Show/edit tags
 
 Bugs and issues

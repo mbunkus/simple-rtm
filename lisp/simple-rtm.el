@@ -219,6 +219,15 @@
   (get-buffer simple-rtm--details-buffer-name))
 
 (defun simple-rtm-mode ()
+  "An interactive \"do everything right now\" mode for Remember The Milk
+
+Display all of your lists and tasks in a new buffer or switch to
+that buffer if it already exists.
+
+Each action will be sent to the Remember The Milk web interface
+immediately.
+
+\\{simple-rtm-mode-map}"
   (interactive)
   (let* ((buffer (simple-rtm--buffer))
          (window (get-buffer-window buffer)))
@@ -236,6 +245,7 @@
   )
 
 (defun simple-rtm--completing-read-multiple-regex--complete ()
+  "Complete the minibuffer contents as far as possible."
   (interactive)
   (let* ((input (minibuffer-completion-contents))
          (reify (lambda (re)
@@ -584,6 +594,7 @@
               (t nil))))
 
 (defun simple-rtm-list-toggle-expansion ()
+  "Expand or collapse the list point is in."
   (interactive)
   (let* ((list-id (get-text-property (point) :list-id))
          (list (or (simple-rtm--find-list list-id)
@@ -593,12 +604,14 @@
       (simple-rtm-redraw))))
 
 (defun simple-rtm-list-expand-all ()
+  "Expand all lists."
   (interactive)
   (dolist (list (getf simple-rtm-data :lists))
     (simple-rtm--list-set-expansion list 'expand))
   (simple-rtm-redraw))
 
 (defun simple-rtm-list-collapse-all ()
+  "Collapse all lists."
   (interactive)
   (dolist (list (getf simple-rtm-data :lists))
     (simple-rtm--list-set-expansion list 'collapse))
@@ -692,22 +705,22 @@
 
 (simple-rtm--defun-task-action
   "postpone"
-  "Postpone the selected tasks."
+  "Postpone the marked tasks."
   (rtm-tasks-postpone list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
   "complete"
-  "Complete the selected tasks."
+  "Complete the marked tasks."
   (rtm-tasks-complete list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
   "delete"
-  "Delete the selected tasks."
+  "Delete the marked tasks."
   (rtm-tasks-delete list-id taskseries-id task-id))
 
 (simple-rtm--defun-task-action
   "set-priority"
-  "Set the priority of the selected tasks."
+  "Set the priority of the marked tasks."
   (unless (string= priority (xml-get-attribute task-node 'priority))
     (rtm-tasks-set-priority list-id taskseries-id task-id priority))
   :args (setq priority (simple-rtm--read "New priority: "
@@ -716,7 +729,7 @@
 
 (simple-rtm--defun-task-action
   "set-duedate"
-  "Set the due date of the selected tasks."
+  "Set the due date of the marked tasks."
   (unless (string= duedate (simple-rtm--task-duedate task-node))
     (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
   :args (setq duedate (simple-rtm--read "New due date: "
@@ -724,7 +737,7 @@
 
 (simple-rtm--defun-task-action
   "set-time-estimate"
-  "Set the time estimate of the selected tasks."
+  "Set the time estimate of the marked tasks."
   (unless (string= time-estimate (xml-get-attribute task-node 'estimate))
     (rtm-tasks-set-estimate list-id taskseries-id task-id time-estimate))
   :args (setq time-estimate (simple-rtm--read "New time estimate: "
@@ -733,7 +746,7 @@
 
 (simple-rtm--defun-task-action
   "set-url"
-  "Set the URL of the selected tasks."
+  "Set the URL of the marked tasks."
   (unless (string= url (xml-get-attribute taskseries-node 'url))
     (rtm-tasks-set-url list-id taskseries-id task-id url))
   :args (setq url (simple-rtm--read "New URL: "
@@ -741,7 +754,7 @@
 
 (simple-rtm--defun-task-action
   "set-location"
-  "Set the location for the selected tasks."
+  "Set the location for the marked tasks."
   (rtm-tasks-set-location list-id taskseries-id task-id (and location (xml-get-attribute location 'id)))
   :args (setq location-name (simple-rtm--read "New location: "
                                               :collection (simple-rtm--location-names))
@@ -749,7 +762,7 @@
 
 (simple-rtm--defun-task-action
   "rename"
-  "Rename the selected tasks."
+  "Rename the marked tasks."
   (unless (string= name (getf task :name))
     (rtm-tasks-set-name list-id taskseries-id task-id name))
   :args (setq name (simple-rtm--read "Rename to: "
@@ -758,7 +771,7 @@
 
 (simple-rtm--defun-task-action
   "move"
-  "Move selected tasks to another list."
+  "Move marked tasks to another list."
   (rtm-tasks-move-to list-id (getf new-list :id) taskseries-id task-id)
   :args (setq list-name (simple-rtm--read "New list: "
                                           :collection (simple-rtm--list-names)
@@ -769,7 +782,7 @@
 
 (simple-rtm--defun-task-action
   "add-note"
-  "Add a note to the selected tasks."
+  "Add a note to the marked tasks."
   (rtm-tasks-notes-add list-id taskseries-id task-id note-title note-text)
   :args (setq note-title (simple-rtm--read "Note title: "
                                            :error-msg-if-empty "Note title must not be empty.")
@@ -778,13 +791,13 @@
 
 (simple-rtm--defun-task-action
   "delete-note"
-  "Delete the selected note."
+  "Delete the note point is at."
   (rtm-tasks-notes-delete (xml-get-attribute note 'id))
   :with-note t)
 
 (simple-rtm--defun-task-action
   "edit-note"
-  "Edit the selected note."
+  "Edit the note point is at."
   (rtm-tasks-notes-edit (xml-get-attribute note 'id) note-title note-text)
   :with-note t
   :force-reload t
@@ -799,11 +812,28 @@
   "smart-add"
   "Add a new task with smart add functionality.
 
-See http://www.rememberthemilk.com/services/smartadd/ for an
-explanation of the syntax supported.
+See http://www.rememberthemilk.com/services/smartadd/ for a full
+explanation of the syntax supported. Summary:
+
+Task name and due date: Enter an arbitrary name along with the
+due date spec, e.g. \"Do laundy next Saturday\"
+
+Due date: \"^spec-or-date\", e.g. \"^tomorrow\" or
+\"^2011-09-01\"
+
+Priority: \"!prio\", e.g. \"!1\"
+
+Lists: \"#list-name\", e.g. \"#Private\"
+
+Locations: \"@location\", e.g. \"@work\"
+
+Time estimate: \"=estimate\", e.g. \"=10 min\"
+
+URLs: Simply add the URL. Doesn't need a special prefix.
 
 Tab completion is supported for locations, lists, priorities and
-due dates."
+due dates with their prefix (see above, e.g. \"some task
+#In<TAB>\" could be expanded to \"some task #Inbox\")."
   (rtm-tasks-add spec "1")
   :args (setq spec-raw (simple-rtm--read "Task spec: "
                                          :multi-collection (simple-rtm--multi-collection-for-smart-add)
@@ -933,17 +963,23 @@ due dates."
               (move-to-column (cdr pos)))))))))
 
 (defun simple-rtm-task-set-thing-at-point ()
+  "Edit the task's property at point.
+
+Allows the user to edit e.g. the due date, the time estimate or
+the task's name depending on where point is."
   (interactive)
   (call-interactively (or (get-text-property (point) :change-func)
                           (error "There's nothing to change here."))))
 
 (defun simple-rtm-quit-details ()
+  "Quit the task details window."
   (interactive)
   (quit-window t)
   (ignore-errors
     (delete-window)))
 
 (defun simple-rtm-task-select-toggle-current ()
+  "Toggle the mark of the task at point."
   (interactive)
   (let* ((task (simple-rtm--find-task-at-point)))
     (when task
@@ -953,6 +989,7 @@ due dates."
   (forward-line))
 
 (defun simple-rtm-task-select-current ()
+  "Mark the task at point."
   (interactive)
   (let* ((task (simple-rtm--find-task-at-point)))
     (when task
@@ -962,6 +999,7 @@ due dates."
   (forward-line))
 
 (defun simple-rtm-task-select-all ()
+  "Mark all visible tasks."
   (interactive)
   (dolist (list (getf simple-rtm-data :lists))
     (if (simple-rtm--list-visible-p list)
@@ -970,6 +1008,7 @@ due dates."
   (simple-rtm-redraw))
 
 (defun simple-rtm-task-select-none ()
+  "Unmark all visible tasks."
   (interactive)
   (dolist (list (getf simple-rtm-data :lists))
     (if (simple-rtm--list-visible-p list)
@@ -1002,7 +1041,7 @@ Will only unmark the tasks if the list is expanded."
   (simple-rtm-redraw))
 
 (defun simple-rtm-task-select-regex (&optional regex)
-  "Select tasks matching REGEX."
+  "Mark visible tasks matching REGEX."
   (interactive)
   (unless regex
     (setf regex (simple-rtm--read "Mark tasks matching: ")))
@@ -1047,6 +1086,10 @@ Will only unmark the tasks if the list is expanded."
     (setq simple-rtm-data (list :lists (simple-rtm--sort-lists (mapcar list-node-handler simple-rtm-lists))))))
 
 (defun simple-rtm-reload-all ()
+  "Reload everything from Remember The Milk.
+
+This will lists and locations. Afterwards tasks are reloaded by
+calling `simple-rtm-reload'."
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
     (setq simple-rtm-lists nil
@@ -1066,6 +1109,7 @@ Will only unmark the tasks if the list is expanded."
                          (downcase (xml-get-attribute l2 'name)))))))
 
 (defun simple-rtm-reload ()
+  "Reload tasks from Remember The Milk."
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
     (unless simple-rtm-lists
@@ -1077,6 +1121,7 @@ Will only unmark the tasks if the list is expanded."
     (simple-rtm-redraw)))
 
 (defun simple-rtm-redraw ()
+  "Redraw the SimpleRTM buffer."
   (interactive)
   (with-current-buffer (simple-rtm--buffer)
     (simple-rtm--save-pos
