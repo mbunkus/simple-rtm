@@ -352,7 +352,8 @@
       (setf found (string= (or (get-text-property (point) :task-id) "") task-id))
 
       (unless found
-        (goto-char list-at)))
+        (goto-char list-at)
+        (setq found t)))
     found))
 
 (defun simple-rtm--overlay-name (list-or-id)
