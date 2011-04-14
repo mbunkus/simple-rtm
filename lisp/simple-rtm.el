@@ -1,3 +1,25 @@
+;;; simple-rtm.el --- Interactive Emacs mode for Remember The Milk
+
+;; Copyright (C) 2011 Moritz Bunkus
+
+;; Author: Moritz Bunkus <morit@bunkus.org>
+;; Created: April 3, 2011
+;; Version: 0.1
+;; Keywords: remember the milk productivity todo
+
+;; This product uses the Remember The Milk API but is not endorsed or
+;; certified by Remember The Milk
+
+;; This file is NOT part of GNU Emacs.
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the MIT license (see COPYING).
+
+;; This file is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+;; GNU General Public License for more details.
+
 (require 'rtm)
 (require 'pp)
 (require 'cl)
