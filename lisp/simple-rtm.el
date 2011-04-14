@@ -823,7 +823,8 @@ Due date: \"^spec-or-date\", e.g. \"^tomorrow\" or
 
 Priority: \"!prio\", e.g. \"!1\"
 
-Lists: \"#list-name\", e.g. \"#Private\"
+Lists: \"#list-name\", e.g. \"#Private\". If no list is given
+then the list at point will be used.
 
 Locations: \"@location\", e.g. \"@work\"
 
