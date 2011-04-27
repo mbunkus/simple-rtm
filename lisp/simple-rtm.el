@@ -638,8 +638,8 @@ immediately.
                                                           priority)))))))
 
 (defmacro simple-rtm--defun-action (name doc &rest body)
-  (declare (indent 0))
-  `(defun ,(intern (concat "simple-rtm-" name)) ()
+  (declare (indent defun))
+  `(defun ,(intern (concat "simple-rtm-" (symbol-name name))) ()
      ,doc
      (interactive)
      (with-current-buffer (simple-rtm--buffer)
@@ -648,14 +648,14 @@ immediately.
      (message "Done.")))
 
 (defmacro simple-rtm--defun-task-action (name doc body &rest options)
-  (declare (indent 0))
+  (declare (indent defun))
   (let* ((args (getf options :args))
          (act (cdr args))
          vars)
     (while act
       (setq vars (append vars (list (car act)))
             act (cddr act)))
-    `(defun ,(intern (concat "simple-rtm-task-" name)) ()
+    `(defun ,(intern (concat "simple-rtm-task-" (symbol-name name))) ()
        ,doc
        (interactive)
        (let* ((selected-tasks ,(if (getf options :no-tasks) nil `(simple-rtm--selected-tasks)))
@@ -692,34 +692,31 @@ immediately.
            (message (concat "Done." (if transaction-has-ids " Actions can be undone."))))))))
 
 (defmacro simple-rtm--defun-set-priority (priority)
-  (declare (indent 0))
+  (declare (indent defun))
+  (setq priority (if (symbolp priority) (symbol-name priority) (format "%d" priority)))
   `(simple-rtm--defun-task-action
-     ,(concat "set-priority-" priority)
+     ,(intern (concat "set-priority-" priority))
      ,(concat "Set the priority of selected tasks to " priority ".")
      (simple-rtm--task-set-priority task ,(if (string= priority "none") "N" priority))))
 
-(simple-rtm--defun-set-priority "1")
-(simple-rtm--defun-set-priority "2")
-(simple-rtm--defun-set-priority "3")
-(simple-rtm--defun-set-priority "none")
+(simple-rtm--defun-set-priority 1)
+(simple-rtm--defun-set-priority 2)
+(simple-rtm--defun-set-priority 3)
+(simple-rtm--defun-set-priority none)
 
-(simple-rtm--defun-task-action
-  "postpone"
+(simple-rtm--defun-task-action postpone
   "Postpone the marked tasks."
   (rtm-tasks-postpone list-id taskseries-id task-id))
 
-(simple-rtm--defun-task-action
-  "complete"
+(simple-rtm--defun-task-action complete
   "Complete the marked tasks."
   (rtm-tasks-complete list-id taskseries-id task-id))
 
-(simple-rtm--defun-task-action
-  "delete"
+(simple-rtm--defun-task-action delete
   "Delete the marked tasks."
   (rtm-tasks-delete list-id taskseries-id task-id))
 
-(simple-rtm--defun-task-action
-  "set-priority"
+(simple-rtm--defun-task-action set-priority
   "Set the priority of the marked tasks."
   (unless (string= priority (xml-get-attribute task-node 'priority))
     (rtm-tasks-set-priority list-id taskseries-id task-id priority))
@@ -727,16 +724,14 @@ immediately.
                                          :initial-input (xml-get-attribute (car (xml-get-children (getf first-task :xml) 'task))
                                                                            'priority))))
 
-(simple-rtm--defun-task-action
-  "set-duedate"
+(simple-rtm--defun-task-action set-duedate
   "Set the due date of the marked tasks."
   (unless (string= duedate (simple-rtm--task-duedate task-node))
     (rtm-tasks-set-due-date list-id taskseries-id task-id duedate "0" "1"))
   :args (setq duedate (simple-rtm--read "New due date: "
                                         :initial-input (simple-rtm--task-duedate (car (xml-get-children (getf first-task :xml) 'task))))))
 
-(simple-rtm--defun-task-action
-  "set-time-estimate"
+(simple-rtm--defun-task-action set-time-estimate
   "Set the time estimate of the marked tasks."
   (unless (string= time-estimate (xml-get-attribute task-node 'estimate))
     (rtm-tasks-set-estimate list-id taskseries-id task-id time-estimate))
@@ -744,24 +739,21 @@ immediately.
                                               :initial-input (xml-get-attribute (car (xml-get-children (getf first-task :xml) 'task))
                                                                                 'estimate))))
 
-(simple-rtm--defun-task-action
-  "set-url"
+(simple-rtm--defun-task-action set-url
   "Set the URL of the marked tasks."
   (unless (string= url (xml-get-attribute taskseries-node 'url))
     (rtm-tasks-set-url list-id taskseries-id task-id url))
   :args (setq url (simple-rtm--read "New URL: "
                                     :initial-input (xml-get-attribute (getf first-task :xml) 'url))))
 
-(simple-rtm--defun-task-action
-  "set-location"
+(simple-rtm--defun-task-action set-location
   "Set the location for the marked tasks."
   (rtm-tasks-set-location list-id taskseries-id task-id (and location (xml-get-attribute location 'id)))
   :args (setq location-name (simple-rtm--read "New location: "
                                               :collection (simple-rtm--location-names))
               location (simple-rtm--find-location-by 'name location-name)))
 
-(simple-rtm--defun-task-action
-  "rename"
+(simple-rtm--defun-task-action rename
   "Rename the marked tasks."
   (unless (string= name (getf task :name))
     (rtm-tasks-set-name list-id taskseries-id task-id name))
@@ -769,8 +761,7 @@ immediately.
                                      :initial-input (getf first-task :name)
                                      :error-msg-if-empty "Name must not be empty.")))
 
-(simple-rtm--defun-task-action
-  "move"
+(simple-rtm--defun-task-action move
   "Move marked tasks to another list."
   (rtm-tasks-move-to list-id (getf new-list :id) taskseries-id task-id)
   :args (setq list-name (simple-rtm--read "New list: "
@@ -780,8 +771,7 @@ immediately.
               new-list (or (simple-rtm--find-list-by-name list-name)
                            (error "List not found."))))
 
-(simple-rtm--defun-task-action
-  "add-note"
+(simple-rtm--defun-task-action add-note
   "Add a note to the marked tasks."
   (rtm-tasks-notes-add list-id taskseries-id task-id note-title note-text)
   :args (setq note-title (simple-rtm--read "Note title: "
@@ -789,14 +779,12 @@ immediately.
               note-text (simple-rtm--read "Note text: "
                                           :error-msg-if-empty "Note text must not be empty.")))
 
-(simple-rtm--defun-task-action
-  "delete-note"
+(simple-rtm--defun-task-action delete-note
   "Delete the note point is at."
   (rtm-tasks-notes-delete (xml-get-attribute note 'id))
   :with-note t)
 
-(simple-rtm--defun-task-action
-  "edit-note"
+(simple-rtm--defun-task-action edit-note
   "Edit the note point is at."
   (rtm-tasks-notes-edit (xml-get-attribute note 'id) note-title note-text)
   :with-note t
@@ -808,8 +796,7 @@ immediately.
                                           :error-msg-if-empty "Note text must not be empty."
                                           :initial-input (decode-coding-string (caddr note) 'utf-8))))
 
-(simple-rtm--defun-task-action
-  "smart-add"
+(simple-rtm--defun-task-action smart-add
   "Add a new task with smart add functionality.
 
 See http://www.rememberthemilk.com/services/smartadd/ for a full
@@ -849,8 +836,7 @@ due dates with their prefix (see above, e.g. \"some task
   :no-tasks t
   :force-reload t)
 
-(simple-rtm--defun-action
-  "undo"
+(simple-rtm--defun-action undo
   "Undo previous action."
   (let ((transaction-ids (simple-rtm--last-mass-transaction)))
     (unless transaction-ids
