@@ -919,6 +919,7 @@ due dates with their prefix (see above, e.g. \"some task
                  (location-str (if location
                                    (propertize (xml-get-attribute location 'name) 'face 'simple-rtm-task-location)
                                  "none"))
+                 (today (format-time-string "%Y-%m-%d"))
                  (duedate (simple-rtm--task-duedate task-node))
                  (duedate-str (if duedate
                                   (propertize (simple-rtm--format-duedate duedate)
@@ -933,7 +934,6 @@ due dates with their prefix (see above, e.g. \"some task
                  (notes (xml-get-children (car (xml-get-children taskseries-node 'notes))
                                           'note))
                  (note-num 0)
-                 (today (format-time-string "%Y-%m-%d"))
                  (inhibit-read-only t)
                  (content (lambda (func &rest text)
                             (propertize (concat (apply 'concat text) "\n")
