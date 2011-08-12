@@ -182,6 +182,7 @@
         (define-key map (kbd "E n") 'simple-rtm-list-collapse-all)
         (define-key map (kbd "RET") 'simple-rtm-task-show-details)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
+        (define-key map (kbd "C-/") 'simple-rtm-undo)
         (define-key map (kbd "a") 'simple-rtm-task-select-all-in-list)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
