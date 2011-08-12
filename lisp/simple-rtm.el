@@ -183,6 +183,8 @@
         (define-key map (kbd "RET") 'simple-rtm-task-show-details)
         (define-key map (kbd "TAB") 'simple-rtm-list-toggle-expansion)
         (define-key map (kbd "C-/") 'simple-rtm-undo)
+        (define-key map (kbd "C-<down>") 'simple-rtm-list-goto-next)
+        (define-key map (kbd "C-<up>") 'simple-rtm-list-goto-previous)
         (define-key map (kbd "a") 'simple-rtm-task-select-all-in-list)
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
@@ -1142,5 +1144,24 @@ calling `simple-rtm-reload'."
           (simple-rtm--render-list list)))))
   (if (simple-rtm--details-buffer-visible-p)
       (simple-rtm--redraw-task-details)))
+
+(defun simple-rtm-list-goto-next ()
+  "Go to the next list"
+  (interactive)
+  (if (and (= (point) (point-at-bol))
+           (< (point) (point-max)))
+      (forward-char))
+  (save-match-data
+    (if (search-forward-regexp "^\\[" nil t)
+        (beginning-of-line)
+      (goto-char (point-max)))))
+
+(defun simple-rtm-list-goto-previous ()
+  "Go to the previous list"
+  (interactive)
+  (save-match-data
+    (if (search-backward-regexp "^\\[" nil t)
+        (beginning-of-line)
+      (goto-char (point-min)))))
 
 (provide 'simple-rtm)
