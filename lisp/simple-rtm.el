@@ -578,16 +578,17 @@ immediately.
                (xml-get-children (car (xml-get-children taskseries-node 'notes))
                                  'note))))
 
-(defun simple-rtm--location-names ()
+(defun simple-rtm--location-names (&optional no-error)
   (or (mapcar (lambda (location)
                 (xml-get-attribute location 'name))
               simple-rtm-locations)
-      (error "No locations have been set yet.")))
+      (unless no-error
+        (error "No locations have been set yet."))))
 
 (defun simple-rtm--multi-collection-for-smart-add ()
   `((:regex "!\\(.*\\)"   :prefix "!" :collection ("1" "2" "3" "4"))
     (:regex "#\\(.*\\)"   :prefix "#" :collection ,(simple-rtm--list-names))
-    (:regex "@\\(.*\\)"   :prefix "@" :collection ,(simple-rtm--location-names))
+    (:regex "@\\(.*\\)"   :prefix "@" :collection ,(simple-rtm--location-names t))
     (:regex "\\^\\(.*\\)" :prefix "^" :collection ("today" "tomorrow" "monday" "tuesday" "wednesday" "thursday" "friday" "saturday" "sunday"))))
 
 (defun simple-rtm--modify-task (id modifier)
