@@ -4,7 +4,7 @@
 
 ;; Author: Moritz Bunkus <morit@bunkus.org>
 ;; Created: April 3, 2011
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: remember the milk productivity todo
 
 ;; This product uses the Remember The Milk API but is not endorsed or
@@ -40,6 +40,25 @@
   "Add the list at point to the task spec if no list is given when adding tasks."
   :group 'simple-rtm
   :type 'boolean)
+
+(defcustom simple-rtm-mode-line-format
+  "[due:%da]"
+  "Control string formatting the string to display in the mode line.
+Ordinary characters in the control string are printed as-is, while
+conversion specifications introduced by a `%' character in the control
+string are substituted as follows:
+%t Total number of tasks
+%p1 Number of tasks with priority 1
+%p2 Number of tasks with priority 2
+%p3 Number of tasks with priority 3
+%pn Number of tasks without a priority
+%d1 Number of due tasks with priority 1
+%d2 Number of due tasks with priority 2
+%d3 Number of due tasks with priority 3
+%dn Number of due tasks without a priority
+%da Number of due tasks regardless of their priority"
+  :group 'simple-rtm
+  :type '(choice string (const nil)))
 
 (defgroup simple-rtm-faces nil
   "Customize the appearance of SimpleRTM"
@@ -147,6 +166,10 @@
   "Face for note titles."
   :group 'simple-rtm-faces)
 
+(defvar simple-rtm-mode-line-string nil
+  "String to display in the mode line.")
+;;;###autoload (put 'simple-rtm-mode-line-string 'risky-local-variable t)
+
 (defvar simple-rtm-lists)
 (defvar simple-rtm-locations)
 (defvar simple-rtm-tasks)
@@ -231,8 +254,10 @@
         (define-key map (kbd "z") 'simple-rtm-undo)
         map))
 
-(defun simple-rtm--buffer ()
-  (get-buffer-create "*SimpleRTM*"))
+(defun simple-rtm--buffer (&optional dont-create)
+  (if dont-create
+      (get-buffer "*SimpleRTM*")
+    (get-buffer-create "*SimpleRTM*")))
 
 (defconst simple-rtm--details-buffer-name
   "*SimpleRTM task details*")
@@ -243,6 +268,7 @@
 (defun simple-rtm--details-buffer-visible-p ()
   (get-buffer simple-rtm--details-buffer-name))
 
+;;;###autoload
 (defun simple-rtm-mode ()
   "An interactive \"do everything right now\" mode for Remember The Milk
 
@@ -1131,7 +1157,8 @@ calling `simple-rtm-reload'."
       (simple-rtm--load-locations))
     (setq simple-rtm-tasks (rtm-tasks-get-list nil "status:incomplete"))
     (simple-rtm--build-data)
-    (simple-rtm-redraw)))
+    (simple-rtm-redraw)
+    (simple-rtm--update-mode-line-string)))
 
 (defun simple-rtm-redraw ()
   "Redraw the SimpleRTM buffer."
@@ -1164,5 +1191,90 @@ calling `simple-rtm-reload'."
     (if (search-backward-regexp "^\\[" nil t)
         (beginning-of-line)
       (goto-char (point-min)))))
+
+(defun simple-rtm--build-mode-line-text ()
+  "Build the text for the mode line according to `simple-rtm-mode-line-format'"
+  (let* ((buffer (simple-rtm--buffer t))
+         (keys (list :p1 :p2 :p3 :pn :d1 :d2 :d3 :dn :da :t))
+         (data (apply 'append (mapcar (lambda (key) (list key 0)) keys)))
+         (do-inc (lambda (key)
+                   (setf (getf data key)
+                         (1+ (getf data key)))))
+         (result simple-rtm-mode-line-format)
+         (today-sec (float-time (date-to-time (format-time-string "%Y-%m-%d 00:00:00"))))
+         priority taskseries-node task-node
+         duedate duedate-sec)
+    ;; Only do work if a SimpleRTM exists.
+    (when buffer
+      (with-current-buffer buffer
+        ;; Iterate over all lists and in all tasks and increase the
+        ;; appropriate counters.
+        (dolist (list (getf simple-rtm-data :lists))
+          (dolist (task (getf list :tasks))
+            (funcall do-inc :t)
+
+            ;; Deconstruct data structure into smaller ones
+            (setq taskseries-node (getf task :xml)
+                  task-node (car (xml-get-children taskseries-node 'task))
+                  priority (xml-get-attribute task-node 'priority)
+                  duedate (simple-rtm--task-duedate (car (xml-get-children taskseries-node 'task))))
+
+            ;; Check whether or not the current task is due, i.e. if
+            ;; it has a due date and if said date is either today or
+            ;; in the past.
+            (if (not duedate)
+                (funcall do-inc :dn)
+              (setq duedate-sec (float-time (date-to-time (concat duedate " 00:00:00"))))
+              (if (not (< (- duedate-sec today-sec) (* 60 60 24)))
+                  (funcall do-inc :dn)
+                ;; Task is due today or prior to today
+                (funcall do-inc :da)
+                (funcall do-inc (cond ((string= priority "1") :d1)
+                                      ((string= priority "2") :d2)
+                                      ((string= priority "3") :d3)
+                                      (t                      :dn)))))
+
+            ;; Count according to priority regardless of due date.
+            (funcall do-inc (cond ((string= priority "1") :p1)
+                                  ((string= priority "2") :p2)
+                                  ((string= priority "3") :p3)
+                                  (t                      :pn))))))
+
+      ;; Format the actual mode line and return it.
+      (dolist (key keys result)
+        (setq result (replace-regexp-in-string (concat "%" (substring (symbol-name key) 1))
+                                               (format "%d" (getf data key))
+                                               result))))))
+
+(defun simple-rtm--update-mode-line-string ()
+  "Update task information in the mode line"
+  (setq simple-rtm-mode-line-string
+	(propertize (or (simple-rtm--build-mode-line-text) "")
+		    'help-echo "SimpleRTM task information"))
+  (force-mode-line-update))
+
+(defun simple-rtm--kill-buffer-hook ()
+  "Unset the mode line string if the SimpleRTM buffer is killed"
+  (let ((srtm-buffer (simple-rtm--buffer t)))
+    (when (and srtm-buffer (eq srtm-buffer (current-buffer)))
+      (setq simple-rtm-mode-line-string "")
+      (force-mode-line-update))))
+
+;;;###autoload
+(define-minor-mode display-simple-rtm-tasks-mode
+  "Display SimpleRTM task statistics in the mode line.
+The text being displayed in the mode line is controlled by the variables
+`simple-rtm-mode-line-format'.
+The mode line will be updated automatically when a task is modified."
+  :global t :group 'simple-rtm
+  (setq simple-rtm-mode-line-string "")
+  (unless global-mode-string
+    (setq global-mode-string '("")))
+  (if (not display-simple-rtm-tasks-mode)
+      (setq global-mode-string
+	    (delq 'simple-rtm-mode-line-string global-mode-string))
+    (add-to-list 'global-mode-string 'simple-rtm-mode-line-string t)
+    (add-hook 'kill-buffer-hook 'simple-rtm--kill-buffer-hook)
+    (simple-rtm--update-mode-line-string)))
 
 (provide 'simple-rtm)

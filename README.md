@@ -21,6 +21,13 @@ visible task is maked then the task at point is acted upon.
 
 For a complete list of supported actions please see the mode's help.
 
+There's also a global minor mode called
+"display-simple-rtm-tasks-mode". It can show a customizable string in
+the mode line that includes counts of certain task types. It defaults
+to displaying the number of due tasks. See the online help for the
+function "display-simple-rtm-tasks-mode" and the variable
+"simple-rtm-task-line-format".
+
 For more infomation see
 [the Remember The Milk website](http://www.rememberthemilk.com).
 
@@ -35,6 +42,13 @@ Add the following to your startup file:
 Then start it with:
 
     (simple-rtm-mode)
+
+If you want to turn on the task count in the mode line then you can
+use these lines:
+
+    (eval-after-load 'simple-rtm
+      '(progn
+         (display-simple-rtm-tasks-mode)))
 
 Remember The Milk requires all applications to be authenticated by the
 user before they can access the user's data. The first time SimpleRTM
