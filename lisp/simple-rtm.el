@@ -216,6 +216,7 @@ string are substituted as follows:
         (define-key map (kbd "m") 'simple-rtm-task-move)
         (define-key map (kbd "n") 'simple-rtm-task-select-none-in-list)
         (define-key map (kbd "p") 'simple-rtm-task-postpone)
+        (define-key map (kbd "q") 'simple-rtm-quit)
         (define-key map (kbd "r") 'simple-rtm-task-rename)
         (define-key map (kbd "t") 'simple-rtm-task-smart-add)
         (define-key map (kbd "u") 'simple-rtm-task-set-url)
@@ -1259,6 +1260,11 @@ calling `simple-rtm-reload'."
     (when (and srtm-buffer (eq srtm-buffer (current-buffer)))
       (setq simple-rtm-mode-line-string "")
       (force-mode-line-update))))
+
+(defun simple-rtm-quit ()
+  "Quit SimpleRTM and kill its buffer"
+  (interactive)
+  (kill-buffer (simple-rtm--buffer)))
 
 ;;;###autoload
 (define-minor-mode display-simple-rtm-tasks-mode
