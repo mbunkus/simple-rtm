@@ -48,7 +48,7 @@ use these lines:
 
     (eval-after-load 'simple-rtm
       '(progn
-         (display-simple-rtm-tasks-mode)))
+         (display-simple-rtm-tasks-mode t)))
 
 Remember The Milk requires all applications to be authenticated by the
 user before they can access the user's data. The first time SimpleRTM
