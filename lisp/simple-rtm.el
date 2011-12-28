@@ -228,6 +228,7 @@ string are substituted as follows:
         (define-key map (kbd "p") 'simple-rtm-task-postpone)
         (define-key map (kbd "q") 'simple-rtm-quit)
         (define-key map (kbd "r") 'simple-rtm-task-rename)
+        (define-key map (kbd "s") 'simple-rtm-task-set-tags)
         (define-key map (kbd "t") 'simple-rtm-task-smart-add)
         (define-key map (kbd "u") 'simple-rtm-task-set-url)
         (define-key map (kbd "y") 'simple-rtm-task-add-note)
@@ -259,6 +260,7 @@ string are substituted as follows:
         (define-key map (kbd "p") 'simple-rtm-task-postpone)
         (define-key map (kbd "q") 'simple-rtm-quit-details)
         (define-key map (kbd "r") 'simple-rtm-task-rename)
+        (define-key map (kbd "s") 'simple-rtm-task-set-tags)
         (define-key map (kbd "t") 'simple-rtm-task-smart-add)
         (define-key map (kbd "u") 'simple-rtm-task-set-url)
         (define-key map (kbd "y") 'simple-rtm-task-add-note)
@@ -815,6 +817,17 @@ immediately.
     (rtm-tasks-set-url list-id taskseries-id task-id url))
   :args (setq url (simple-rtm--read "New URL: "
                                     :initial-input (xml-get-attribute (getf first-task :xml) 'url))))
+
+(simple-rtm--defun-task-action set-tags
+  "Set the tags of the marked tasks."
+  (unless (string= tags (mapconcat (lambda (node) (caddr node))
+                                   (xml-get-children (car (xml-get-children taskseries-node 'tags)) 'tag)
+                                   " "))
+    (rtm-tasks-set-tags list-id taskseries-id task-id (split-string tags " ")))
+  :args (setq tags (simple-rtm--read "New tags: "
+                                     :initial-input (mapconcat (lambda (node) (caddr node))
+                                                               (xml-get-children (car (xml-get-children (getf first-task :xml) 'tags)) 'tag)
+                                                               " "))))
 
 (simple-rtm--defun-task-action set-location
   "Set the location for the marked tasks."
