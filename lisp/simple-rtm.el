@@ -140,6 +140,16 @@ string are substituted as follows:
   "Face for a task's URL."
   :group 'simple-rtm-faces)
 
+(defface simple-rtm-task-tag
+  '((((class color) (background light))
+     :foreground "#00aeff"
+     :inherit simple-rtm-task)
+    (((class color) (background dark))
+     :foreground "#00aeff"
+     :inherit simple-rtm-task))
+  "Face for a task's tag."
+  :group 'simple-rtm-faces)
+
 (defface simple-rtm-task-location
   '((((class color) (background light))
      :foreground "#000000"
@@ -524,6 +534,12 @@ immediately.
          (time-estimate (xml-get-attribute task-node 'estimate))
          (num-notes (length (xml-get-children (car (xml-get-children taskseries-node 'notes))
                                               'note)))
+         (tags (mapcar (lambda (node) (caddr node))
+                       (xml-get-children (car (xml-get-children taskseries-node 'tags)) 'tag)))
+         (tags-str (if tags
+                       (mapconcat (lambda (tag)
+                                    (propertize tag 'face 'simple-rtm-task-tag))
+                                  tags " ")))
          (today (format-time-string "%Y-%m-%d")))
     (insert (propertize (concat (mapconcat 'identity
                                            (delq nil
@@ -535,6 +551,7 @@ immediately.
                                                                        'face (if (string< today duedate)
                                                                                  'simple-rtm-task-duedate
                                                                                'simple-rtm-task-duedate-due)))
+                                                       tags-str
                                                        (propertize name 'face 'simple-rtm-task)
                                                        (if (not (string= time-estimate ""))
                                                            (propertize time-estimate 'face 'simple-rtm-task-time-estimate))
@@ -949,6 +966,13 @@ due dates with their prefix (see above, e.g. \"some task
                  (location-str (if location
                                    (propertize (xml-get-attribute location 'name) 'face 'simple-rtm-task-location)
                                  "none"))
+                 (tags (mapcar (lambda (node) (caddr node))
+                               (xml-get-children (car (xml-get-children taskseries-node 'tags)) 'tag)))
+                 (tags-str (if tags
+                               (mapconcat (lambda (tag)
+                                            (propertize tag 'face 'simple-rtm-task-tag))
+                                          tags " ")
+                             "none"))
                  (today (format-time-string "%Y-%m-%d"))
                  (duedate (simple-rtm--task-duedate task-node))
                  (duedate-str (if duedate
@@ -977,6 +1001,7 @@ due dates with their prefix (see above, e.g. \"some task
                     "\n"
                     (funcall content 'set-priority      "Priority:      " priority-str)
                     (funcall content 'set-duedate       "Due:           " duedate-str)
+                    (funcall content 'set-tags          "Tags:          " tags-str)
                     (funcall content 'set-time-estimate "Time estimate: " time-estimate-str)
                     (funcall content 'set-location      "Location:      " location-str)
                     (funcall content 'set-url           "URL:           " url-str)
