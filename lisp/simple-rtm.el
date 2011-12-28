@@ -600,6 +600,17 @@ immediately.
                         (getf list :name)))
                     (getf simple-rtm-data :lists))))
 
+(defun simple-rtm--tag-names ()
+  (sort (apply 'append
+         (mapcar (lambda (list)
+                   (apply 'append
+                          (mapcar (lambda (task)
+                                    (mapcar 'caddr
+                                            (xml-get-children (car (xml-get-children (getf task :xml) 'tags)) 'tag)))
+                                  (getf list :tasks))))
+                 (getf simple-rtm-data :lists)))
+        'string<))
+
 (defun simple-rtm--find-location-by (attribute value)
   (if (and value (not (string= value "")))
       (find-if (lambda (location)
@@ -634,6 +645,7 @@ immediately.
 (defun simple-rtm--multi-collection-for-smart-add ()
   `((:regex "!\\(.*\\)"   :prefix "!" :collection ("1" "2" "3" "4"))
     (:regex "#\\(.*\\)"   :prefix "#" :collection ,(simple-rtm--list-names))
+    (:regex "%\\(.*\\)"   :prefix "%" :collection ,(simple-rtm--tag-names))
     (:regex "@\\(.*\\)"   :prefix "@" :collection ,(simple-rtm--location-names t))
     (:regex "\\^\\(.*\\)" :prefix "^" :collection ("today" "tomorrow" "monday" "tuesday" "wednesday" "thursday" "friday" "saturday" "sunday"))))
 
@@ -896,6 +908,11 @@ Priority: \"!prio\", e.g. \"!1\"
 Lists: \"#list-name\", e.g. \"#Private\". If no list is given
 then the list at point will be used.
 
+Tags: \"%tag\", e.g. \"%birthday\". Completion allows for new
+tags to be created. This prefix is intentionally different from
+RTM's web interface where the \"#\" is used for both lists and
+tags.
+
 Locations: \"@location\", e.g. \"@work\"
 
 Time estimate: \"=estimate\", e.g. \"=10 min\"
@@ -909,14 +926,15 @@ due dates with their prefix (see above, e.g. \"some task
   :args (setq spec-raw (simple-rtm--read "Task spec: "
                                          :multi-collection (simple-rtm--multi-collection-for-smart-add)
                                          :error-msg-if-empty "Task spec must not be empty.")
-              spec (or (if (and simple-rtm-use-default-list-for-new-tasks
-                                (not (string-match-p "\\s-#." spec-raw)))
-                           (let* ((list (simple-rtm--find-list-at-point))
-                                  (name (or (getf list :name) "")))
-                             (if (not (or (string= name "")
-                                          (simple-rtm--list-smart-p list)))
-                               (concat spec-raw " #" name))))
-                       spec-raw))
+              spec (replace-regexp-in-string " +%" " #"
+                                             (or (if (and simple-rtm-use-default-list-for-new-tasks
+                                                          (not (string-match-p "\\s-#." spec-raw)))
+                                                     (let* ((list (simple-rtm--find-list-at-point))
+                                                            (name (or (getf list :name) "")))
+                                                       (if (not (or (string= name "")
+                                                                    (simple-rtm--list-smart-p list)))
+                                                           (concat spec-raw " #" name))))
+                                                 spec-raw)))
   :no-tasks t
   :force-reload t)
 

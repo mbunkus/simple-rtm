@@ -75,13 +75,13 @@ Known issues
 
 * Smart lists don't work yet.
 * Repeating tasks are completely untested and unsupported.
+* Tag tab completion only works with smart-add, not when editing them afterward.
 
 Planned features
 ----------------
 
 * Make fewer calls to RTM after each action (parse and integrate each
   call's result instead of reloading all tasks).
-* Show/edit tags
 
 Bugs and issues
 ---------------
