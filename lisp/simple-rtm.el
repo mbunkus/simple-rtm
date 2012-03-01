@@ -36,6 +36,12 @@
 		(function-item iswitchb-completing-read)
 		(function :tag "Other")))
 
+(defcustom simple-rtm-sort-order 'date-priority-name
+  "Attributes that tasks are sorted by."
+  :group 'simple-rtm
+  :type '(radio (function-item date-priority-name)
+		(function-item priority-date-name)))
+
 (defcustom simple-rtm-use-default-list-for-new-tasks t
   "Add the list at point to the task spec if no list is given when adding tasks."
   :group 'simple-rtm
@@ -516,8 +522,8 @@ immediately.
          (t2-prio (xml-get-attribute t2-task 'priority))
          (t1-name (downcase (getf t1 :name)))
          (t2-name (downcase (getf t2 :name))))
-    (= -1 (or (simple-rtm--cmp t1-prio t2-prio)
-              (simple-rtm--cmp t1-due t2-due)
+    (= -1 (or (if (eq simple-rtm-sort-order 'priority-date-name) (simple-rtm--cmp t1-prio t2-prio) (simple-rtm--cmp t1-due  t2-due))
+              (if (eq simple-rtm-sort-order 'priority-date-name) (simple-rtm--cmp t1-due  t2-due)  (simple-rtm--cmp t1-prio t2-prio))
               (simple-rtm--cmp t1-name t2-name)
               0))))
 
