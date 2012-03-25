@@ -107,9 +107,7 @@ API Kit"
      (,result-func ,result-path
                    (,call-func ',rtm-method-name
                                ,@(mapcar (lambda (sym)
-                                           (list 'backquote
-                                                 (cons (symbol-name sym)
-                                                       (list ', sym))))
+                                           `(cons ,(symbol-name sym) ,sym))
                                          ;; remove lambda keywords
                                          (remove-if (lambda (sym)
                                                       (or (eq sym '&optional)
