@@ -605,7 +605,7 @@ application:\n\n")
   "Construct a URL for calling a method from params"
   (let* ((param-pairs (mapcar 'rtm-format-param params))
          (query (rtm-join-params param-pairs)))
-    (concat base-uri "?" query)))
+    (string-to-unibyte (concat base-uri "?" query))))
 
 ;; adapted from avdi's code:
 (defun rtm-format-param (param)
