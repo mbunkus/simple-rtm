@@ -542,8 +542,7 @@ immediately.
          (time-estimate (xml-get-attribute task-node 'estimate))
          (num-notes (length (xml-get-children (car (xml-get-children taskseries-node 'notes))
                                               'note)))
-         (tags (mapcar (lambda (node) (caddr node))
-                       (xml-get-children (car (xml-get-children taskseries-node 'tags)) 'tag)))
+         (tags (getf task :tags))
          (tags-str (if tags
                        (mapconcat (lambda (tag)
                                     (propertize tag 'face 'simple-rtm-task-tag))
@@ -607,14 +606,13 @@ immediately.
                     (getf simple-rtm-data :lists))))
 
 (defun simple-rtm--tag-names ()
-  (sort (apply 'append
-         (mapcar (lambda (list)
-                   (apply 'append
-                          (mapcar (lambda (task)
-                                    (mapcar 'caddr
-                                            (xml-get-children (car (xml-get-children (getf task :xml) 'tags)) 'tag)))
-                                  (getf list :tasks))))
-                 (getf simple-rtm-data :lists)))
+  (sort (remove-duplicates (apply 'append
+                                  (mapcar (lambda (list)
+                                            (apply 'append
+                                                   (mapcar (lambda (task) (getf task :tags))
+                                                           (getf list :tasks))))
+                                          (getf simple-rtm-data :lists)))
+                           :test 'equal)
         'string<))
 
 (defun simple-rtm--find-location-by (attribute value)
@@ -838,14 +836,10 @@ immediately.
 
 (simple-rtm--defun-task-action set-tags
   "Set the tags of the marked tasks."
-  (unless (string= tags (mapconcat (lambda (node) (caddr node))
-                                   (xml-get-children (car (xml-get-children taskseries-node 'tags)) 'tag)
-                                   " "))
+  (unless (string= tags (mapconcat 'identity (getf task :tags) " "))
     (rtm-tasks-set-tags list-id taskseries-id task-id (split-string tags " ")))
   :args (setq tags (simple-rtm--read "New tags: "
-                                     :initial-input (mapconcat (lambda (node) (caddr node))
-                                                               (xml-get-children (car (xml-get-children (getf first-task :xml) 'tags)) 'tag)
-                                                               " "))))
+                                     :initial-input (mapconcat 'identity (getf first-task :tags) " "))))
 
 (simple-rtm--defun-task-action set-location
   "Set the location for the marked tasks."
@@ -1003,8 +997,7 @@ due dates with their prefix (see above, e.g. \"some task
                  (location-str (if location
                                    (propertize (xml-get-attribute location 'name) 'face 'simple-rtm-task-location)
                                  "none"))
-                 (tags (mapcar (lambda (node) (caddr node))
-                               (xml-get-children (car (xml-get-children taskseries-node 'tags)) 'tag)))
+                 (tags (getf task :tags))
                  (tags-str (if tags
                                (mapconcat (lambda (tag)
                                             (propertize tag 'face 'simple-rtm-task-tag))
@@ -1165,6 +1158,8 @@ Will only unmark the tasks if the list is expanded."
                     :id task-id
                     :list-id list-id
                     :marked (gethash task-id marked)
+                    :tags (mapcar (lambda (node) (decode-coding-string (caddr node) 'utf-8))
+                                  (xml-get-children (car (xml-get-children task-node 'tags)) 'tag))
                     :xml task-node))))
          (list-node-handler
           (lambda (list-node)
