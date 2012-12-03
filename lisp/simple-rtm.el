@@ -1,10 +1,10 @@
 ;;; simple-rtm.el --- Interactive Emacs mode for Remember The Milk
 
-;; Copyright (C) 2011 Moritz Bunkus
+;; Copyright (C) 2011, 2012 Moritz Bunkus
 
 ;; Author: Moritz Bunkus <morit@bunkus.org>
 ;; Created: April 3, 2011
-;; Version: 0.2
+;; Version: 0.3
 ;; Keywords: remember the milk productivity todo
 
 ;; This product uses the Remember The Milk API but is not endorsed or
@@ -228,6 +228,8 @@ string are substituted as follows:
         (define-key map (kbd "c") 'simple-rtm-task-complete)
         (define-key map (kbd "d") 'simple-rtm-task-set-duedate)
         (define-key map (kbd "g") 'simple-rtm-task-set-time-estimate)
+        (define-key map (kbd "j") 'next-line)
+        (define-key map (kbd "k") 'previous-line)
         (define-key map (kbd "l") 'simple-rtm-task-set-location)
         (define-key map (kbd "m") 'simple-rtm-task-move)
         (define-key map (kbd "n") 'simple-rtm-task-select-none-in-list)
