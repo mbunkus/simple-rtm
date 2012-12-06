@@ -239,6 +239,7 @@ string are substituted as follows:
         (define-key map (kbd "s") 'simple-rtm-task-set-tags)
         (define-key map (kbd "t") 'simple-rtm-task-smart-add)
         (define-key map (kbd "u") 'simple-rtm-task-set-url)
+        (define-key map (kbd "x") 'simple-rtm-task-select-toggle-current)
         (define-key map (kbd "y") 'simple-rtm-task-add-note)
         (define-key map (kbd "z") 'simple-rtm-undo)
         map))
