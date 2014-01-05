@@ -1344,3 +1344,5 @@ The mode line will be updated automatically when a task is modified."
     (simple-rtm--update-mode-line-string)))
 
 (provide 'simple-rtm)
+
+;;; simple-rtm.el ends here
