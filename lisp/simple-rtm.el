@@ -302,7 +302,8 @@ immediately.
 
 \\{simple-rtm-mode-map}"
   (interactive)
-  (let* ((buffer (simple-rtm--buffer))
+  (let* ((default-directory "~/")
+         (buffer (simple-rtm--buffer))
          (window (get-buffer-window buffer)))
     (if window
         (select-window window)
