@@ -5,6 +5,7 @@
 ;; Author: Moritz Bunkus <morit@bunkus.org>
 ;; Created: April 3, 2011
 ;; Version: 0.3
+;; Package-Requires: ((rtm "0.1"))
 ;; Keywords: remember the milk productivity todo
 
 ;; This product uses the Remember The Milk API but is not endorsed or
